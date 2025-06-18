@@ -1,0 +1,296 @@
+import React from 'react'
+import { motion } from 'framer-motion'
+import { 
+  FileText, 
+  Upload, 
+  Download, 
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Plus
+} from 'lucide-react'
+import { useAuthStore } from '../stores/useAuthStore'
+import { Link } from 'react-router-dom'
+
+const Dashboard: React.FC = () => {
+  const { user } = useAuthStore()
+
+  // Mock data - replace with real data from API
+  const stats = [
+    {
+      title: 'Total Documents',
+      value: '24',
+      change: '+12%',
+      changeType: 'positive',
+      icon: FileText,
+      color: 'blue'
+    },
+    {
+      title: 'Pending Reviews',
+      value: '5',
+      change: '-8%',
+      changeType: 'negative',
+      icon: Clock,
+      color: 'yellow'
+    },
+    {
+      title: 'Approved',
+      value: '18',
+      change: '+15%',
+      changeType: 'positive',
+      icon: CheckCircle,
+      color: 'green'
+    },
+    {
+      title: 'Downloads',
+      value: '142',
+      change: '+23%',
+      changeType: 'positive',
+      icon: Download,
+      color: 'purple'
+    }
+  ]
+
+  const recentDocuments = [
+    {
+      id: '1',
+      title: 'Machine Learning Research Paper',
+      status: 'approved',
+      uploadedAt: '2024-01-15',
+      downloads: 45
+    },
+    {
+      id: '2',
+      title: 'Data Structures Assignment',
+      status: 'pending',
+      uploadedAt: '2024-01-14',
+      downloads: 12
+    },
+    {
+      id: '3',
+      title: 'Algorithm Analysis Report',
+      status: 'under_review',
+      uploadedAt: '2024-01-13',
+      downloads: 8
+    }
+  ]
+
+  const recentActivity = [
+    {
+      id: '1',
+      type: 'upload',
+      message: 'Uploaded "Machine Learning Research Paper"',
+      timestamp: '2 hours ago'
+    },
+    {
+      id: '2',
+      type: 'review',
+      message: 'Document "Data Analysis Report" was approved',
+      timestamp: '5 hours ago'
+    },
+    {
+      id: '3',
+      type: 'download',
+      message: 'Your document was downloaded 3 times',
+      timestamp: '1 day ago'
+    }
+  ]
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'under_review':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const formatStatus = (status: string) => {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+  }
+
+  return (
+    <div className="page-container">
+      <div className="content-wrapper">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back, {user?.first_name}!
+          </h1>
+          <p className="text-gray-600">
+            Here's what's happening with your documents today.
+          </p>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8"
+        >
+          <div className="flex flex-wrap gap-4">
+            <Link to="/upload" className="btn-primary">
+              <Plus className="w-5 h-5 mr-2" />
+              Upload Document
+            </Link>
+            <Link to="/documents" className="btn-secondary">
+              <FileText className="w-5 h-5 mr-2" />
+              Browse Documents
+            </Link>
+          </div>
+        </motion.div>
+
+        {/* Stats Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          {stats.map((stat, index) => (
+            <motion.div
+              key={stat.title}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 * index }}
+              className="glass p-6 rounded-2xl hover-lift"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 bg-${stat.color}-100 rounded-xl flex items-center justify-center`}>
+                  <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+                </div>
+                <div className={`text-sm font-medium ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                  {stat.change}
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {stat.value}
+              </div>
+              <div className="text-gray-600 text-sm">
+                {stat.title}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Documents */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="glass p-6 rounded-2xl"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Recent Documents</h3>
+              <Link to="/documents" className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+                View All
+              </Link>
+            </div>
+            
+            <div className="space-y-4">
+              {recentDocuments.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 mb-1">
+                      {doc.title}
+                    </h4>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <span>Uploaded {doc.uploadedAt}</span>
+                      <span>{doc.downloads} downloads</span>
+                    </div>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.status)}`}>
+                    {formatStatus(doc.status)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="glass p-6 rounded-2xl"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Recent Activity</h3>
+              <button className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+                View All
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    {activity.type === 'upload' && <Upload className="w-4 h-4 text-blue-600" />}
+                    {activity.type === 'review' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                    {activity.type === 'download' && <Download className="w-4 h-4 text-purple-600" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900 text-sm">
+                      {activity.message}
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {activity.timestamp}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Quick Tips */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 glass p-6 rounded-2xl"
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-yellow-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Quick Tips</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600 font-bold">•</span>
+              <span>Upload documents in PDF format for better compatibility</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600 font-bold">•</span>
+              <span>Add relevant tags to make your documents easier to find</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600 font-bold">•</span>
+              <span>Check pending reviews regularly to stay updated</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600 font-bold">•</span>
+              <span>Use descriptive titles and detailed descriptions</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+export default Dashboard
