@@ -30,21 +30,28 @@ const Header: React.FC = () => {
     logout()
     navigate('/login')
   }
-
   const navItems = [
-    { path: '/', label: 'Home', icon: Home, public: true },
     { path: '/dashboard', label: 'Dashboard', icon: BarChart3, auth: true },
     { path: '/documents', label: 'Documents', icon: FileText, auth: true },
     { path: '/upload', label: 'Upload', icon: Upload, auth: true },
     { path: '/admin', label: 'Admin', icon: Users, auth: true, role: 'admin' },
   ]
 
-  const filteredNavItems = navItems.filter(item => {
-    if (item.public) return true
-    if (item.auth && !isAuthenticated) return false
-    if (item.role && user?.role !== item.role) return false
-    return true
-  })
+  const publicNavItems = [
+    { path: '/', label: 'Home', icon: Home, public: true },
+  ]
+
+  const getNavItems = () => {
+    if (isAuthenticated) {
+      return navItems.filter(item => {
+        if (item.role && user?.role !== item.role) return false
+        return true
+      })
+    }
+    return publicNavItems
+  }
+
+  const filteredNavItems = getNavItems()
 
   const isActive = (path: string) => location.pathname === path
 

@@ -139,16 +139,29 @@ export const documentsApi = {
     return api.get(`/documents/${id}`)
   },
 
-  uploadDocument: (data: FormData): Promise<AxiosResponse<ApiResponse<Document>>> => {
-    return api.post('/documents', data, {
+  uploadDocument: (data: FormData, onUploadProgress?: (progressEvent: any) => void): Promise<AxiosResponse<Document>> => {
+    return api.post('/documents/upload', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress,
+    })
+  },
+
+  uploadDocumentsBatch: (data: FormData, onUploadProgress?: (progressEvent: any) => void): Promise<AxiosResponse<Document[]>> => {
+    return api.post('/documents/upload-batch', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress,
+    })
+  },
+  updateDocument: (id: string, data: FormData): Promise<AxiosResponse<Document>> => {
+    return api.put(`/documents/${id}`, data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
-  },
-
-  updateDocument: (id: string, data: Partial<Document>): Promise<AxiosResponse<ApiResponse<Document>>> => {
-    return api.put(`/documents/${id}`, data)
   },
 
   deleteDocument: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
@@ -221,46 +234,20 @@ export const usersApi = {
 
 // Dashboard API
 export const dashboardApi = {
-  getStats: (): Promise<AxiosResponse<ApiResponse<DashboardStats>>> => {
+  getStats: (): Promise<AxiosResponse<DashboardStats>> => {
     return api.get('/dashboard/stats')
   },
 
-  getActivity: (limit?: number): Promise<AxiosResponse<ApiResponse<ActivityItem[]>>> => {
+  getRecentDocuments: (limit: number = 10): Promise<AxiosResponse<Document[]>> => {
+    return api.get('/dashboard/recent-documents', { params: { limit } })
+  },
+
+  getActivity: (limit: number = 20): Promise<AxiosResponse<ActivityItem[]>> => {
     return api.get('/dashboard/activity', { params: { limit } })
   },
 }
 
-// Search API
-export const searchApi = {
-  search: (query: string, filters?: DocumentFilter): Promise<AxiosResponse<ApiResponse<SearchResult>>> => {
-    return api.get('/search', { params: { q: query, ...filters } })
-  },
-
-  getSuggestions: (query: string): Promise<AxiosResponse<ApiResponse<string[]>>> => {
-    return api.get('/search/suggestions', { params: { q: query } })
-  },
-}
-
-// Notifications API
-export const notificationsApi = {
-  getNotifications: (unreadOnly?: boolean): Promise<AxiosResponse<ApiResponse<Notification[]>>> => {
-    return api.get('/notifications', { params: { unread_only: unreadOnly } })
-  },
-
-  markAsRead: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
-    return api.put(`/notifications/${id}/read`)
-  },
-
-  markAllAsRead: (): Promise<AxiosResponse<ApiResponse<void>>> => {
-    return api.put('/notifications/read-all')
-  },
-
-  deleteNotification: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
-    return api.delete(`/notifications/${id}`)
-  },
-}
-
-// Audit API (Admin only)
+// Audit API
 export const auditApi = {
   getAuditLogs: (filters?: {
     user_id?: string

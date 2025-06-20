@@ -6,7 +6,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-gray-200 dark:border-gray-800;
   }
   
   html {
@@ -16,9 +16,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
-  body {
-    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-foreground transition-colors duration-500;
+    body {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900 transition-colors duration-500;
     @apply dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 dark:text-gray-100;
     font-feature-settings: 'rlig' 1, 'calt' 1;
     background-attachment: fixed;
@@ -138,23 +137,43 @@
   .section-header {
     @apply text-3xl md:text-4xl font-bold gradient-text mb-8 text-center;
   }
-  
-  /* Form Components */
+    /* Form Components */
   .form-group {
     @apply relative mb-6;
   }
 
   .form-input {
     @apply w-full px-4 py-3 border border-gray-200 rounded-xl glass input-focus;
-    @apply placeholder-gray-400 peer bg-white/50 dark:bg-slate-800/50;
+    @apply placeholder-gray-400 bg-white/50 dark:bg-slate-800/50;
     @apply dark:border-slate-600 dark:placeholder-gray-500;
+    @apply transition-all duration-200;
+  }
+
+  .form-input:focus {
+    @apply outline-none ring-2 ring-blue-500/20 border-blue-500;
   }
 
   .form-label {
-    @apply absolute left-4 -top-2.5 bg-white dark:bg-slate-900 px-2 text-sm font-medium text-gray-600;
-    @apply transition-all duration-200 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400;
-    @apply peer-placeholder-shown:top-3 peer-focus:-top-2.5 peer-focus:text-sm peer-focus:text-blue-600;
-    @apply dark:text-gray-300 dark:peer-focus:text-blue-400;
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+    @apply transition-all duration-200;
+  }
+
+  .floating-label {
+    @apply absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400;
+    @apply transition-all duration-200 pointer-events-none z-10;
+    @apply bg-white dark:bg-slate-900 px-2;
+  }
+
+  .floating-label.focused,
+  .floating-label.filled {
+    @apply -top-2.5 translate-y-0 text-sm text-blue-600 dark:text-blue-400;
+    @apply font-medium;
+  }
+
+  .form-input:focus + .floating-label,
+  .form-input:not(:placeholder-shown) + .floating-label {
+    @apply -top-2.5 translate-y-0 text-sm text-blue-600 dark:text-blue-400;
+    @apply font-medium;
   }
   
   /* Status Badges */
@@ -476,17 +495,6 @@
 /* Form animations */
 .form-group {
   @apply relative mb-6;
-}
-
-.form-input {
-  @apply w-full px-4 py-3 border border-gray-200 rounded-lg glass input-focus
-         placeholder-transparent peer;
-}
-
-.form-label {
-  @apply absolute left-4 -top-2.5 bg-white px-2 text-sm font-medium text-gray-600
-         transition-all duration-200 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-         peer-placeholder-shown:top-3 peer-focus:-top-2.5 peer-focus:text-sm peer-focus:text-blue-600;
 }
 
 /* Mobile responsive adjustments */

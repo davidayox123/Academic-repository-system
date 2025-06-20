@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Union
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, WebSocket
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from .config import settings
@@ -167,3 +167,33 @@ def is_password_strong(password: str) -> tuple[bool, list[str]]:
         errors.append("Password must contain at least one special character")
     
     return len(errors) == 0, errors
+
+import jwt
+
+async def get_current_user_ws(
+    websocket: WebSocket,
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Get current user from WebSocket connection"""
+    try:
+        # Try to get token from query parameters
+        token = websocket.query_params.get('token')
+        if not token:
+            return None
+        
+        # Verify token
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        
+        if user_id is None:
+            return None
+        
+        # Get user from database
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            return None
+        
+        return user
+    
+    except jwt.PyJWTError:
+        return None

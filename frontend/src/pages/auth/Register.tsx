@@ -174,15 +174,14 @@ const Register: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             onSubmit={handleSubmit}
             className="glass p-8 rounded-2xl space-y-6"
-          >
-            {/* Name Fields */}
+          >            {/* Name Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="form-group">
                 <label htmlFor="first_name" className="form-label">
                   First Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
                   <input
                     id="first_name"
                     name="first_name"
@@ -190,12 +189,18 @@ const Register: React.FC = () => {
                     required
                     value={formData.first_name}
                     onChange={handleChange}
-                    className={`form-input pl-10 ${errors.first_name ? 'border-red-500' : ''}`}
+                    className={`form-input pl-10 ${errors.first_name ? 'border-red-500 ring-red-500/20' : ''}`}
                     placeholder="Enter your first name"
                   />
                 </div>
                 {errors.first_name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.first_name}</p>
+                  <motion.p 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-500 text-sm mt-1"
+                  >
+                    {errors.first_name}
+                  </motion.p>
                 )}
               </div>
 
@@ -204,7 +209,7 @@ const Register: React.FC = () => {
                   Last Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
                   <input
                     id="last_name"
                     name="last_name"
@@ -212,12 +217,18 @@ const Register: React.FC = () => {
                     required
                     value={formData.last_name}
                     onChange={handleChange}
-                    className={`form-input pl-10 ${errors.last_name ? 'border-red-500' : ''}`}
+                    className={`form-input pl-10 ${errors.last_name ? 'border-red-500 ring-red-500/20' : ''}`}
                     placeholder="Enter your last name"
                   />
                 </div>
                 {errors.last_name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.last_name}</p>
+                  <motion.p 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-500 text-sm mt-1"
+                  >
+                    {errors.last_name}
+                  </motion.p>
                 )}
               </div>
             </div>

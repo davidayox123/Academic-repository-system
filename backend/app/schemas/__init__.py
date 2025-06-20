@@ -3,6 +3,9 @@ from typing import Optional, List
 from datetime import datetime
 from ..models import UserRole, DocumentStatus, ReviewDecision
 
+# Import document schemas
+from .document import DocumentBase, DocumentCreate, DocumentUpdate, DocumentResponse, DocumentListResponse
+
 # Base schemas
 class BaseResponse(BaseModel):
     success: bool = True

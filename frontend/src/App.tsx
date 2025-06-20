@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from './stores/useAuthStore'
 import { useThemeStore } from './stores/useThemeStore'
@@ -50,7 +50,7 @@ const pageTransition = {
 }
 
 function App() {
-  const { isInitialized } = useAuthStore()
+  const { isInitialized, isAuthenticated } = useAuthStore()
   const { theme, resolvedTheme } = useThemeStore()
   const location = useLocation()
 
@@ -138,12 +138,24 @@ function App() {
               exit="out"
               variants={pageVariants}
               transition={pageTransition}
-            >
-              <Routes location={location}>
+            >              <Routes location={location}>
                 {/* Public Routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+                {!isAuthenticated && (
+                  <>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                  </>
+                )}
+                
+                {/* Authenticated Routes */}
+                {isAuthenticated && (
+                  <>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/register" element={<Navigate to="/dashboard" replace />} />
+                  </>
+                )}
                 
                 {/* Protected Routes */}
                 <Route

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   FileText, 
@@ -7,94 +7,68 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Plus
+  Plus,
+  RefreshCw
 } from 'lucide-react'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useDashboardStore, startDashboardAutoRefresh, stopDashboardAutoRefresh } from '../stores/useDashboardStore'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { Link } from 'react-router-dom'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { formatDistanceToNow } from 'date-fns'
+import toast from 'react-hot-toast'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore()
-
-  // Mock data - replace with real data from API
-  const stats = [
-    {
-      title: 'Total Documents',
-      value: '24',
-      change: '+12%',
-      changeType: 'positive',
-      icon: FileText,
-      color: 'blue'
+  const { 
+    stats, 
+    recentDocuments, 
+    recentActivity, 
+    isLoading, 
+    error, 
+    lastUpdated,
+    fetchAllDashboardData,
+    clearError
+  } = useDashboardStore()  // WebSocket for real-time updates
+  useWebSocket({
+    onMessage: (message) => {
+      if (message.type === 'document_uploaded') {
+        toast.success('New document uploaded!')
+      } else if (message.type === 'document_reviewed') {
+        toast('Document review completed', { icon: 'ℹ️' })
+      }
     },
-    {
-      title: 'Pending Reviews',
-      value: '5',
-      change: '-8%',
-      changeType: 'negative',
-      icon: Clock,
-      color: 'yellow'
+    onConnect: () => {
+      console.log('Dashboard WebSocket connected')
     },
-    {
-      title: 'Approved',
-      value: '18',
-      change: '+15%',
-      changeType: 'positive',
-      icon: CheckCircle,
-      color: 'green'
-    },
-    {
-      title: 'Downloads',
-      value: '142',
-      change: '+23%',
-      changeType: 'positive',
-      icon: Download,
-      color: 'purple'
+    onDisconnect: () => {
+      console.log('Dashboard WebSocket disconnected')
     }
-  ]
+  })
 
-  const recentDocuments = [
-    {
-      id: '1',
-      title: 'Machine Learning Research Paper',
-      status: 'approved',
-      uploadedAt: '2024-01-15',
-      downloads: 45
-    },
-    {
-      id: '2',
-      title: 'Data Structures Assignment',
-      status: 'pending',
-      uploadedAt: '2024-01-14',
-      downloads: 12
-    },
-    {
-      id: '3',
-      title: 'Algorithm Analysis Report',
-      status: 'under_review',
-      uploadedAt: '2024-01-13',
-      downloads: 8
-    }
-  ]
+  useEffect(() => {
+    // Fetch initial data
+    fetchAllDashboardData()
+    
+    // Start auto-refresh
+    startDashboardAutoRefresh()
 
-  const recentActivity = [
-    {
-      id: '1',
-      type: 'upload',
-      message: 'Uploaded "Machine Learning Research Paper"',
-      timestamp: '2 hours ago'
-    },
-    {
-      id: '2',
-      type: 'review',
-      message: 'Document "Data Analysis Report" was approved',
-      timestamp: '5 hours ago'
-    },
-    {
-      id: '3',
-      type: 'download',
-      message: 'Your document was downloaded 3 times',
-      timestamp: '1 day ago'
+    // Cleanup on unmount
+    return () => {
+      stopDashboardAutoRefresh()
     }
-  ]
+  }, [fetchAllDashboardData])
+
+  // Clear error when component mounts
+  useEffect(() => {
+    if (error) {
+      clearError()
+    }
+  }, [error, clearError])
+
+  const handleRefresh = () => {
+    fetchAllDashboardData()
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -112,24 +86,110 @@ const Dashboard: React.FC = () => {
   }
 
   const formatStatus = (status: string) => {
-    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())  }
+
+  // Loading state
+  if (isLoading && !stats) {
+    return (
+      <div className="page-container">
+        <div className="content-wrapper flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner size="lg" text="Loading dashboard..." />
+        </div>
+      </div>
+    )
   }
+
+  // Error state
+  if (error && !stats) {
+    return (
+      <div className="page-container">
+        <div className="content-wrapper">
+          <div className="text-center py-12">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error loading dashboard</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={handleRefresh}
+              className="btn-primary"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Stats configuration
+  const statsConfig = stats ? [
+    {
+      title: 'Total Documents',
+      value: stats.total_documents.value.toString(),
+      change: stats.total_documents.change,
+      changeType: stats.total_documents.change_type,
+      icon: FileText,
+      color: 'blue'
+    },
+    {
+      title: 'Pending Reviews',
+      value: stats.pending_reviews.value.toString(),
+      change: stats.pending_reviews.change,
+      changeType: stats.pending_reviews.change_type,
+      icon: Clock,
+      color: 'yellow'
+    },
+    {
+      title: 'Approved',
+      value: stats.approved_documents.value.toString(),
+      change: stats.approved_documents.change,
+      changeType: stats.approved_documents.change_type,
+      icon: CheckCircle,
+      color: 'green'
+    },
+    {
+      title: 'Downloads',
+      value: stats.total_downloads.value.toString(),
+      change: stats.total_downloads.change,
+      changeType: stats.total_downloads.change_type,
+      icon: Download,
+      color: 'purple'
+    }
+  ] : []
 
   return (
     <div className="page-container">
-      <div className="content-wrapper">
-        {/* Header */}
+      <div className="content-wrapper">        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.first_name}!
-          </h1>
-          <p className="text-gray-600">
-            Here's what's happening with your documents today.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome back, {user?.first_name}!
+              </h1>
+              <p className="text-gray-600">
+                Here's what's happening with your documents today.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              {lastUpdated && (
+                <p className="text-sm text-gray-500">
+                  Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+                </p>
+              )}
+              <button
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+          </div>
         </motion.div>
 
         {/* Quick Actions */}
@@ -149,16 +209,14 @@ const Dashboard: React.FC = () => {
               Browse Documents
             </Link>
           </div>
-        </motion.div>
-
-        {/* Stats Grid */}
+        </motion.div>        {/* Stats Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
-          {stats.map((stat, index) => (
+          {statsConfig.map((stat, index) => (
             <motion.div
               key={stat.title}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -208,7 +266,7 @@ const Dashboard: React.FC = () => {
                       {doc.title}
                     </h4>
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <span>Uploaded {doc.uploadedAt}</span>
+                      <span>Uploaded {doc.uploaded_at}</span>
                       <span>{doc.downloads} downloads</span>
                     </div>
                   </div>
