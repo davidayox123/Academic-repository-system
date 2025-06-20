@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, String, Boolean, DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -21,10 +21,9 @@ class User(Base):
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    
-    # Profile information
+      # Profile information
     role = Column(Enum(UserRole), default=UserRole.STUDENT, index=True)
-    department = Column(String(100), nullable=False, index=True)
+    department_id = Column(String(36), ForeignKey("departments.id"), nullable=False, index=True)
     student_id = Column(String(50), nullable=True, index=True)
       # Status
     is_active = Column(Boolean, default=True, index=True)
@@ -32,9 +31,11 @@ class User(Base):
     # Relationships
     documents = relationship("Document", foreign_keys="Document.uploaded_by", back_populates="uploader")
     
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Timestamps    created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    department = relationship("Department", back_populates="users")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"

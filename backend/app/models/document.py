@@ -23,6 +23,11 @@ class DocumentCategory(enum.Enum):
     PROJECT = "project"
     OTHER = "other"
 
+class ReviewDecision(enum.Enum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    PENDING = "pending"
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -33,11 +38,10 @@ class Document(Base):
     file_path = Column(String(500), nullable=False)
     file_size = Column(Integer, nullable=False)
     file_type = Column(String(100), nullable=False)
-    
-    # Status and categorization
+      # Status and categorization
     status = Column(Enum(DocumentStatus), default=DocumentStatus.PENDING, index=True)
     category = Column(Enum(DocumentCategory), default=DocumentCategory.OTHER, index=True)
-    department = Column(String(100), nullable=True, index=True)
+    department_id = Column(String(36), ForeignKey("departments.id"), nullable=True, index=True)
     course_code = Column(String(20), nullable=True, index=True)
     
     # Metadata
@@ -52,14 +56,15 @@ class Document(Base):
     reviewed_by = Column(CHAR(36), ForeignKey("users.id"), nullable=True, index=True)
     uploader = relationship("User", foreign_keys=[uploaded_by], back_populates="documents")
     reviewer = relationship("User", foreign_keys=[reviewed_by])
-    
-    # Review fields
+      # Review fields
     review_comments = Column(Text, nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
-    
-    # Timestamps
+      # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    department = relationship("Department", back_populates="documents")
 
     def __repr__(self):
         return f"<Document(id={self.id}, title={self.title}, status={self.status})>"

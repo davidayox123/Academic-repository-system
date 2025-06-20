@@ -4,9 +4,9 @@ from sqlalchemy import func, desc
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
-from ...core.database import get_db
-from ...core.auth import get_current_user
-from ...models import User, Document, DocumentStatus, UserRole
+from ....core.database import get_db
+from ....core.auth import get_current_user
+from ....models import User, Document, DocumentStatus, UserRole
 
 router = APIRouter()
 
