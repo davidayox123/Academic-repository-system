@@ -1,10 +1,9 @@
 # Import all models from their respective files
 from .user import User, UserRole
-from .document import Document, DocumentStatus, DocumentCategory
+from .document import Document, DocumentStatus, DocumentCategory, DocumentType
 from .department import Department
-from .metadata import Metadata
-from .review import Review, ReviewDecision
-from .audit_log import AuditLog
+from .review import Review, ReviewDecision, ReviewStatus
+from .activity_log import ActivityLog, ActivityType, ActivityLevel
 from .download import Download
 
 # Make all models available when importing from app.models
@@ -14,10 +13,13 @@ __all__ = [
     "Document", 
     "DocumentStatus", 
     "DocumentCategory",
+    "DocumentType",
     "Department",
-    "Metadata",
     "Review",
     "ReviewDecision", 
-    "AuditLog",
+    "ReviewStatus",
+    "ActivityLog",
+    "ActivityType",
+    "ActivityLevel",
     "Download"
 ]

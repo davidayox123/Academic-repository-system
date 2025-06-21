@@ -1,18 +1,14 @@
 import { useEffect } from 'react'
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuthStore } from './stores/useAuthStore'
 import { useThemeStore } from './stores/useThemeStore'
 
 // Layout Components
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
-import ProtectedRoute from './components/auth/ProtectedRoute'
 
 // Pages
 import Home from './pages/Home'
-import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
 import Dashboard from './pages/Dashboard'
 import Documents from './pages/Documents'
 import DocumentDetail from './pages/DocumentDetail'
@@ -21,61 +17,20 @@ import Profile from './pages/Profile'
 import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
 
-// Loading Component
-import LoadingSpinner from './components/ui/LoadingSpinner'
-
-// Page transition variants
-const pageVariants = {
-  initial: {
-    opacity: 0,
-    y: 20,
-    scale: 0.95
-  },
-  in: {
-    opacity: 1,
-    y: 0,
-    scale: 1
-  },
-  out: {
-    opacity: 0,
-    y: -20,
-    scale: 1.05
-  }
-}
-
-const pageTransition = {
-  type: 'tween' as const,
-  ease: 'anticipate' as const,
-  duration: 0.4
-}
-
 function App() {
-  const { isInitialized, isAuthenticated } = useAuthStore()
-  const { theme, resolvedTheme } = useThemeStore()
   const location = useLocation()
+  const { resolvedTheme } = useThemeStore()
 
-  // Apply theme to document
+  // Apply theme to document on mount and theme changes
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
+    const root = document.documentElement
+    root.classList.remove('light', 'dark')
+    root.classList.add(resolvedTheme)
+    root.setAttribute('data-theme', resolvedTheme)
   }, [resolvedTheme])
 
-  // Show loading spinner while initializing
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <LoadingSpinner size="lg" text="Initializing Academic Repository..." />
-        </motion.div>
-      </div>
-    )
-  }
-
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`min-h-screen transition-colors duration-300`}>
       {/* Dynamic Background */}
       <div className="fixed inset-0 -z-20">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900 transition-colors duration-500"></div>
@@ -104,118 +59,27 @@ function App() {
               repeat: Infinity,
               ease: "linear"
             }}
-            className="absolute top-1/2 -right-40 w-96 h-96 bg-indigo-200/30 dark:bg-indigo-800/20 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{
-              rotate: [0, 180, 360],
-              scale: [1, 1.3, 1],
-            }}
-            transition={{
-              duration: 30,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            className="absolute -bottom-40 left-1/3 w-64 h-64 bg-purple-200/30 dark:bg-purple-800/20 rounded-full blur-3xl"
+            className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-200/30 dark:bg-indigo-800/20 rounded-full blur-3xl"
           />
         </div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="relative min-h-screen z-10"
-      >
-        <Header />
-        
-        <main className="relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >              <Routes location={location}>
-                {/* Public Routes */}
-                {!isAuthenticated && (
-                  <>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                  </>
-                )}
-                
-                {/* Authenticated Routes */}
-                {isAuthenticated && (
-                  <>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/register" element={<Navigate to="/dashboard" replace />} />
-                  </>
-                )}
-                
-                {/* Protected Routes */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/documents"
-                  element={
-                    <ProtectedRoute>
-                      <Documents />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/documents/:id"
-                  element={
-                    <ProtectedRoute>
-                      <DocumentDetail />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/upload"
-                  element={
-                    <ProtectedRoute>
-                      <Upload />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute requiredRole="admin">
-                      <Admin />
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* 404 Route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </motion.div>
-          </AnimatePresence>
-        </main>
-        
-        <Footer />
-      </motion.div>
+      <Header />
+      <main className="relative z-10 pt-16">
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/:id" element={<DocumentDetail />} />
+            <Route path="/upload" element={<Upload />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AnimatePresence>
+      </main>
+      <Footer />
     </div>
   )
 }

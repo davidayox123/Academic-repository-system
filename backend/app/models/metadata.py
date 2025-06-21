@@ -26,7 +26,7 @@ class Metadata(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    document = relationship("Document", back_populates="metadata")
+    document = relationship("Document", back_populates="document_metadata")
 
     def __repr__(self):
         return f"<Metadata(id={self.id}, document_id={self.document_id}, year={self.publication_year})>"

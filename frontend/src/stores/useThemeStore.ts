@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Theme } from '../types'
+
+type Theme = 'light' | 'dark' | 'system'
 
 interface ThemeState {
   theme: Theme
@@ -24,12 +25,23 @@ const resolveTheme = (theme: Theme): 'light' | 'dark' => {
   return theme
 }
 
+const applyTheme = (resolvedTheme: 'light' | 'dark') => {
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement
+    root.classList.remove('light', 'dark')
+    root.classList.add(resolvedTheme)
+    
+    // Also update the data attribute for better CSS targeting
+    root.setAttribute('data-theme', resolvedTheme)
+  }
+}
+
 export const useThemeStore = create<ThemeState & ThemeActions>()(
   persist(
     (set, get) => ({
       // State
-      theme: 'system',
-      resolvedTheme: resolveTheme('system'),
+      theme: 'light',
+      resolvedTheme: 'light',
 
       // Actions
       setTheme: (theme: Theme) => {
@@ -40,23 +52,30 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
           resolvedTheme: resolved,
         })
 
-        // Update document class
-        if (typeof document !== 'undefined') {
-          document.documentElement.classList.toggle('dark', resolved === 'dark')
-        }
+        applyTheme(resolved)
       },
 
       toggleTheme: () => {
         const { theme } = get()
-        const newTheme = theme === 'light' ? 'dark' : 'light'
-        get().setTheme(newTheme)
+        const newTheme = theme === 'dark' ? 'light' : 'dark'
+        const resolved = resolveTheme(newTheme)
+        
+        set({
+          theme: newTheme,
+          resolvedTheme: resolved,
+        })
+
+        applyTheme(resolved)
       },
     }),
     {
       name: 'theme-storage',
-      partialize: (state) => ({
-        theme: state.theme,
-      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Apply theme on rehydration
+          applyTheme(state.resolvedTheme)
+        }
+      },
     }
   )
 )

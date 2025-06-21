@@ -3,8 +3,9 @@ from typing import Optional, List
 from datetime import datetime
 from ..models import UserRole, DocumentStatus, ReviewDecision
 
-# Import document schemas
+# Import all schemas
 from .document import DocumentBase, DocumentCreate, DocumentUpdate, DocumentResponse, DocumentListResponse
+from .user import UserBase, UserCreate, UserUpdate, UserResponse, UserProfile, MockUser, UserRole as UserRoleSchema, UserStatus
 
 # Base schemas
 class BaseResponse(BaseModel):

@@ -27,7 +27,8 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
     reconnectInterval = 3000,
     maxReconnectAttempts = 5
   } = options
-  const { user, token } = useAuthStore()
+  
+  const { user } = useAuthStore()
   const { fetchStats, fetchRecentDocuments, fetchRecentActivity } = useDashboardStore()
   
   const [isConnected, setIsConnected] = useState(false)
@@ -41,15 +42,14 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
   const generateConnectionId = useCallback(() => {
     return `${user?.id || 'anonymous'}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }, [user?.id])
-
   const connect = useCallback(() => {
-    if (!user || !token) return
+    if (!user || !user.id) return
 
     try {
       setConnectionStatus('connecting')
       connectionIdRef.current = generateConnectionId()
       
-      const wsUrl = `ws://localhost:8000/api/v1/ws/ws/${connectionIdRef.current}?user_id=${user.id}&token=${token}`
+      const wsUrl = `ws://localhost:8000/api/v1/ws/ws/${connectionIdRef.current}?user_id=${user.id}`
       wsRef.current = new WebSocket(wsUrl)
 
       wsRef.current.onopen = () => {
@@ -143,7 +143,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
       console.error('Error creating WebSocket connection:', error)
       setConnectionStatus('error')
     }
-  }, [user, token, onConnect, onDisconnect, onMessage, onError, reconnectInterval, maxReconnectAttempts, generateConnectionId, fetchStats, fetchRecentDocuments, fetchRecentActivity])
+  }, [user, onConnect, onDisconnect, onMessage, onError, reconnectInterval, maxReconnectAttempts, generateConnectionId, fetchStats, fetchRecentDocuments, fetchRecentActivity])
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -184,14 +184,14 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
   // Auto-connect when user is available
   useEffect(() => {
-    if (user && token) {
+    if (user) {
       connect()
     }
 
     return () => {
       disconnect()
     }
-  }, [user, token, connect, disconnect])
+  }, [user, connect, disconnect])
 
   // Ping periodically to keep connection alive
   useEffect(() => {

@@ -22,6 +22,11 @@ from app.models import User
 async def lifespan(app: FastAPI):
     # Startup
     Base.metadata.create_all(bind=engine)
+    
+    # Initialize database with sample data
+    from app.core.init_db import init_sample_data
+    await init_sample_data()
+    
     yield
     # Shutdown
     pass
@@ -36,13 +41,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# CORS middleware - Allow all origins for presentation
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when using "*"
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Mount static files
@@ -67,6 +73,16 @@ async def root():
         "docs": "/docs",
         "redoc": "/redoc"
     }
+
+# Test CORS endpoint
+@app.get("/test-cors")
+async def test_cors():
+    return {"message": "CORS is working!", "timestamp": "2025-06-21"}
+
+# Simple test endpoint to verify routing
+@app.post("/test-register")
+async def test_register():
+    return {"message": "Test register endpoint reached!"}
 
 # WebSocket connection manager for dashboard updates
 class ConnectionManager:

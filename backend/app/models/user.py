@@ -7,7 +7,7 @@ import uuid
 
 from ..core.database import Base
 
-class UserRole(enum.Enum):
+class UserRole(str, enum.Enum):
     STUDENT = "student"
     STAFF = "staff"
     SUPERVISOR = "supervisor"
@@ -18,52 +18,30 @@ class User(Base):
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), unique=True, nullable=False, index=True)
-    first_name = Column(String(100), nullable=False)
-    last_name = Column(String(100), nullable=False)
-    middle_name = Column(String(100), nullable=True)
+    name = Column(String(255), nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    
-    # Role and Department
-    role = Column(Enum(UserRole), default=UserRole.STUDENT, index=True)
-    department_id = Column(String(36), ForeignKey("departments.id"), nullable=False, index=True)
-    
-    # Student specific attributes
-    matric_no = Column(String(50), nullable=True, index=True)  # For students
-    level = Column(Integer, nullable=True)  # For students
-    
-    # Staff specific attributes  
-    staff_id = Column(String(50), nullable=True, index=True)  # For staff
-    position = Column(String(100), nullable=True)  # For staff
-    office_no = Column(String(50), nullable=True)  # For staff
-    
-    # Supervisor specific attributes
-    assigned_department = Column(String(36), ForeignKey("departments.id"), nullable=True)  # For supervisors
-    specialization_area = Column(String(255), nullable=True)  # For supervisors
-    max_documents = Column(Integer, nullable=True, default=50)  # For supervisors
-    
-    # Admin specific attributes
-    admin_id = Column(String(50), nullable=True, index=True)  # For admins
-    admin_level = Column(Integer, nullable=True, default=1)  # For admins
-    permissions_scope = Column(Text, nullable=True)  # For admins (JSON string)
-    
-    # Status
+    role = Column(Enum(UserRole, native_enum=False), default=UserRole.STUDENT, index=True)
+    department_id = Column(CHAR(36), ForeignKey("departments.id"), nullable=False, index=True)
+    avatar = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True, index=True)
-    
-    # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    # Relationships
-    department = relationship("Department", foreign_keys=[department_id], back_populates="users")
-    supervisor_department = relationship("Department", foreign_keys=[assigned_department])
-    
-    # Document relationships
-    uploaded_documents = relationship("Document", foreign_keys="Document.uploader_id", back_populates="uploader")
-    supervised_documents = relationship("Document", foreign_keys="Document.supervisor_id", back_populates="supervisor")
-    
-    # Other relationships
+    # --- Relationships ---
+    # A user belongs to one department
+    department = relationship("Department", back_populates="users")
+
+    # A user can upload many documents
+    uploaded_documents = relationship("Document", back_populates="uploader", foreign_keys="Document.uploader_id")
+
+    # A supervisor can supervise many documents
+    supervised_documents = relationship("Document", back_populates="supervisor", foreign_keys="Document.supervisor_id")    # A user can write many reviews
     reviews = relationship("Review", back_populates="reviewer")
-    audit_logs = relationship("AuditLog", back_populates="user")
+
+    # A user can have many activity logs
+    activity_logs = relationship("ActivityLog", back_populates="user")
+
+    # A user can have many downloads
     downloads = relationship("Download", back_populates="user")
 
     def __repr__(self):

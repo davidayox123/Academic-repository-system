@@ -29,13 +29,9 @@ const api: AxiosInstance = axios.create({
   },
 })
 
-// Request interceptor to add auth token
+// Request interceptor (simplified - no auth needed)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth-token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
     return config
   },
   (error) => {
@@ -43,33 +39,10 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor to handle auth errors
+// Response interceptor (simplified - no auth error handling)
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-
-      try {        const refreshToken = localStorage.getItem('refresh-token')
-        if (refreshToken) {
-          const response = await authApi.refreshToken(refreshToken)
-          const { access_token } = response.data
-          
-          localStorage.setItem('auth-token', access_token)
-          originalRequest.headers.Authorization = `Bearer ${access_token}`
-          
-          return api.request(originalRequest)
-        }
-      } catch (refreshError) {
-        // Refresh failed, redirect to login
-        localStorage.removeItem('auth-token')
-        localStorage.removeItem('refresh-token')
-        window.location.href = '/login'
-      }
-    }
-
+  (error) => {
     return Promise.reject(error)
   }
 )
@@ -123,12 +96,13 @@ export const authApi = {
 
 // Documents API
 export const documentsApi = {
-  getDocuments: (filters?: DocumentFilter): Promise<AxiosResponse<ApiResponse<PaginatedResponse<Document>>>> => {
+  getDocuments: (filters?: DocumentFilter & { role?: string }): Promise<AxiosResponse<ApiResponse<PaginatedResponse<Document>>>> => {
     return api.get('/documents', { params: filters })
   },
 
-  getDocument: (id: string): Promise<AxiosResponse<ApiResponse<Document>>> => {
-    return api.get(`/documents/${id}`)
+  getDocument: (id: string, role?: string): Promise<AxiosResponse<ApiResponse<Document>>> => {
+    const params = role ? { role } : {}
+    return api.get(`/documents/${id}`, { params })
   },
 
   uploadDocument: (data: FormData, onUploadProgress?: (progressEvent: any) => void): Promise<AxiosResponse<Document>> => {
@@ -166,8 +140,9 @@ export const documentsApi = {
     })
   },
 
-  getDocumentStats: (): Promise<AxiosResponse<ApiResponse<DocumentStats>>> => {
-    return api.get('/documents/stats')
+  getDocumentStats: (role?: string): Promise<AxiosResponse<ApiResponse<DocumentStats>>> => {
+    const params = role ? { role } : {}
+    return api.get('/documents/stats', { params })
   },
 }
 
@@ -226,16 +201,24 @@ export const usersApi = {
 
 // Dashboard API
 export const dashboardApi = {
-  getStats: (): Promise<AxiosResponse<DashboardStats>> => {
-    return api.get('/dashboard/stats')
+  getStats: (role?: string): Promise<AxiosResponse<DashboardStats>> => {
+    const params = role ? { role } : {}
+    return api.get('/dashboard/stats', { params })
   },
 
-  getRecentDocuments: (limit: number = 10): Promise<AxiosResponse<Document[]>> => {
-    return api.get('/dashboard/recent-documents', { params: { limit } })
+  getRecentDocuments: (limit: number = 10, role?: string): Promise<AxiosResponse<Document[]>> => {
+    const params = { limit, ...(role && { role }) }
+    return api.get('/dashboard/recent-documents', { params })
   },
 
-  getActivity: (limit: number = 20): Promise<AxiosResponse<ActivityItem[]>> => {
-    return api.get('/dashboard/activity', { params: { limit } })
+  getActivity: (limit: number = 20, role?: string): Promise<AxiosResponse<ActivityItem[]>> => {
+    const params = { limit, ...(role && { role }) }
+    return api.get('/dashboard/activity', { params })
+  },
+
+  getAnalytics: (role?: string, timeframe?: string): Promise<AxiosResponse<any>> => {
+    const params = { ...(role && { role }), ...(timeframe && { timeframe }) }
+    return api.get('/dashboard/analytics', { params })
   },
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FileText, 
@@ -11,67 +11,113 @@ import {
   SortDesc,
   Download,
   Eye,
-  Star,
   Clock,
   CheckCircle,
   AlertCircle,
   Users
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useAuthStore } from '../stores/useAuthStore'
+import { documentsApi, handleApiError } from '../services/api'
+import LoadingSpinner from '../components/ui/LoadingSpinner'
+import toast from 'react-hot-toast'
+import { formatDistanceToNow } from 'date-fns'
+
+interface DocumentItem {
+  id: string
+  title: string
+  filename: string
+  category: string
+  status: string
+  upload_date: string
+  file_size: number
+  uploader_name: string
+  department_name: string
+  download_count: number
+  view_count: number
+}
+
+// Utility function for file size formatting
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 const Documents: React.FC = () => {
+  const { user } = useAuthStore()
+  const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Mock data
-  const documents = [
-    {
-      id: '1',
-      title: 'Advanced Machine Learning Algorithms',
-      description: 'Comprehensive study on neural networks and deep learning architectures for academic research.',
-      author: 'Dr. Sarah Johnson',
-      department: 'Computer Science',
-      uploadDate: '2024-01-15',
-      status: 'approved',
-      downloads: 234,
-      views: 1205,
-      tags: ['AI', 'Machine Learning', 'Neural Networks'],
-      fileType: 'PDF',
-      fileSize: '2.4 MB',
-      rating: 4.8
-    },
-    {
-      id: '2',
-      title: 'Climate Change Impact Assessment',
-      description: 'Analysis of environmental changes and their effects on global ecosystems.',
-      author: 'Prof. Michael Chen',
-      department: 'Environmental Science',
-      uploadDate: '2024-01-14',
-      status: 'under_review',
-      downloads: 89,
-      views: 456,
-      tags: ['Climate', 'Environment', 'Research'],
-      fileType: 'PDF',
-      fileSize: '3.1 MB',
-      rating: 4.6
-    },
-    {
-      id: '3',
-      title: 'Quantum Computing Fundamentals',
-      description: 'Introduction to quantum mechanics principles applied in computational systems.',
-      author: 'Dr. Emma Rodriguez',
-      department: 'Physics',
-      uploadDate: '2024-01-13',
-      status: 'pending',
-      downloads: 156,
-      views: 892,
-      tags: ['Quantum', 'Computing', 'Physics'],
-      fileType: 'PDF',
-      fileSize: '1.8 MB',
-      rating: 4.9
+  // Fetch documents from API
+  const fetchDocuments = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const filters = {
+        role: user?.role,
+        search: searchQuery || undefined
+      }
+      
+      const response = await documentsApi.getDocuments(filters)
+      // Map API response to our component interface
+      const mappedDocs = (response.data.data?.items || []).map((doc: any) => ({
+        id: doc.id,
+        title: doc.title,
+        filename: doc.filename || doc.file_name,
+        category: doc.category,
+        status: doc.status,
+        upload_date: doc.upload_date,
+        file_size: doc.file_size,
+        uploader_name: doc.uploader_name || doc.author?.name || 'Unknown',
+        department_name: doc.department_name || doc.department || 'Unknown',
+        download_count: doc.download_count || 0,
+        view_count: doc.view_count || 0
+      }))
+      setDocuments(mappedDocs)
+    } catch (err: any) {
+      const errorMessage = handleApiError(err)
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
     }
-  ]
+  }
+
+  // Fetch documents on mount and when filters change
+  useEffect(() => {
+    fetchDocuments()
+  }, [user?.role, searchQuery])
+
+  // Handle download
+  const handleDownload = async (documentId: string, title: string) => {
+    try {
+      const response = await documentsApi.downloadDocument(documentId)
+      
+      // Create blob URL and trigger download
+      const blob = new Blob([response.data])
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = title
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success('Download started')
+    } catch (err: any) {
+      toast.error('Failed to download document')
+    }
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -225,9 +271,29 @@ const Documents: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
-
-        {/* Documents Grid/List */}
+        </motion.div>        {/* Documents Grid/List */}
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <LoadingSpinner size="lg" text="Loading documents..." />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Failed to load documents</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>            <button
+              onClick={fetchDocuments}
+              className="btn-primary inline-flex items-center space-x-2"
+            >
+              <span>Retry</span>
+            </button>
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No documents found</h3>
+            <p className="text-gray-600 dark:text-gray-300">Try adjusting your search or filters.</p>
+          </div>
+        ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -248,9 +314,8 @@ const Documents: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
                         <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {doc.fileType} • {doc.fileSize}
+                      </div>                      <div className="text-xs text-gray-500">
+                        PDF • {formatFileSize(doc.file_size)}
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
@@ -264,32 +329,23 @@ const Documents: React.FC = () => {
                   {/* Content */}
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {doc.title}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
-                    {doc.description}
+                  </h3>                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
+                    {doc.filename}
                   </p>
 
-                  {/* Tags */}
+                  {/* Category */}
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {doc.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Meta Info */}
+                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
+                      {doc.category}
+                    </span>
+                  </div>                  {/* Meta Info */}
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <div className="flex items-center space-x-2">
                       <Users className="w-4 h-4" />
-                      <span>{doc.author}</span>
+                      <span>{doc.uploader_name}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 text-yellow-400" />
-                      <span>{doc.rating}</span>
+                      <span>{doc.department_name}</span>
                     </div>
                   </div>
 
@@ -298,23 +354,27 @@ const Documents: React.FC = () => {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1">
                         <Eye className="w-4 h-4" />
-                        <span>{doc.views}</span>
+                        <span>{doc.view_count}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Download className="w-4 h-4" />
-                        <span>{doc.downloads}</span>
+                        <span>{doc.download_count}</span>
                       </div>
                     </div>
-                    <span>{doc.uploadDate}</span>
-                  </div>
-
-                  {/* Actions */}
+                    <span>{formatDistanceToNow(new Date(doc.upload_date), { addSuffix: true })}</span>
+                  </div>                  {/* Actions */}
                   <div className="flex items-center space-x-2">
-                    <button className="btn-primary flex-1 py-2 text-sm">
+                    <Link
+                      to={`/documents/${doc.id}`}
+                      className="btn-primary flex-1 py-2 text-sm flex items-center justify-center"
+                    >
                       <Eye className="w-4 h-4 mr-1" />
                       View
-                    </button>
-                    <button className="btn-secondary px-3 py-2">
+                    </Link>
+                    <button
+                      onClick={() => handleDownload(doc.id, doc.filename)}
+                      className="btn-secondary px-3 py-2"
+                    >
                       <Download className="w-4 h-4" />
                     </button>
                   </div>
@@ -339,44 +399,47 @@ const Documents: React.FC = () => {
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                           {doc.title}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
-                          {doc.description}
+                        </h3>                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
+                          {doc.filename}
                         </p>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <span>{doc.author}</span>
+                          <span>{doc.uploader_name}</span>
                           <span>•</span>
-                          <span>{doc.department}</span>
+                          <span>{doc.department_name}</span>
                           <span>•</span>
-                          <span>{doc.uploadDate}</span>
+                          <span>{formatDistanceToNow(new Date(doc.upload_date), { addSuffix: true })}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{doc.views}</div>
+                    <div className="flex items-center space-x-4">                      <div className="text-center">
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{doc.view_count}</div>
                         <div className="text-xs text-gray-500">Views</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{doc.downloads}</div>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{doc.download_count}</div>
                         <div className="text-xs text-gray-500">Downloads</div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button className="btn-primary py-2 px-4">
+                      </div>                      <div className="flex items-center space-x-2">
+                        <Link
+                          to={`/documents/${doc.id}`}
+                          className="btn-primary py-2 px-4 flex items-center"
+                        >
                           <Eye className="w-4 h-4 mr-1" />
                           View
-                        </button>
-                        <button className="btn-secondary px-3 py-2">
+                        </Link>
+                        <button
+                          onClick={() => handleDownload(doc.id, doc.filename)}
+                          className="btn-secondary px-3 py-2"
+                        >
                           <Download className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
                   </div>
                 </motion.div>
-              ))}
-            </div>
+              ))}            </div>
           )}
         </motion.div>
+        )}
 
         {/* Pagination */}
         <motion.div

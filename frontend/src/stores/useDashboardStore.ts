@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { useAuthStore } from './useAuthStore'
 
 interface DashboardStats {
   total_documents: {
@@ -75,57 +76,79 @@ const initialState = {
 
 export const useDashboardStore = create<DashboardState>()(
   subscribeWithSelector((set) => ({
-    ...initialState,
-
-    fetchStats: async () => {
+    ...initialState,    fetchStats: async () => {
       try {
         set({ isLoading: true, error: null })
-        const response = await api.get('/dashboard/stats')
+        
+        // Get current role from auth store
+        const authStore = useAuthStore.getState()
+        const currentRole = authStore.user?.role
+        
+        const response = await api.get('/dashboard/stats', {
+          params: currentRole ? { role: currentRole } : {}
+        })
         set({ 
           stats: response.data,
           isLoading: false,
           lastUpdated: new Date()
         })
       } catch (error: any) {
-        const message = error.response?.data?.detail || 'Failed to fetch dashboard stats'
+        const message = 'Failed to fetch dashboard stats'
         set({ error: message, isLoading: false })
-        toast.error(message)
+        // Only show error toast for network/server errors, not auth errors
+        if (error.response?.status !== 401) {
+          toast.error(message)
+        }
       }
-    },
-
-    fetchRecentDocuments: async () => {
+    },    fetchRecentDocuments: async () => {
       try {
         set({ isLoading: true, error: null })
-        const response = await api.get('/dashboard/recent-documents')
+        
+        // Get current role from auth store
+        const authStore = useAuthStore.getState()
+        const currentRole = authStore.user?.role
+        
+        const response = await api.get('/dashboard/recent-documents', {
+          params: currentRole ? { role: currentRole } : {}
+        })
         set({ 
           recentDocuments: response.data,
           isLoading: false,
           lastUpdated: new Date()
         })
       } catch (error: any) {
-        const message = error.response?.data?.detail || 'Failed to fetch recent documents'
+        const message = 'Failed to fetch recent documents'
         set({ error: message, isLoading: false })
-        toast.error(message)
+        // Only show error toast for network/server errors, not auth errors
+        if (error.response?.status !== 401) {
+          toast.error(message)
+        }
       }
-    },
-
-    fetchRecentActivity: async () => {
+    },    fetchRecentActivity: async () => {
       try {
         set({ isLoading: true, error: null })
-        const response = await api.get('/dashboard/recent-activity')
+        
+        // Get current role from auth store
+        const authStore = useAuthStore.getState()
+        const currentRole = authStore.user?.role
+        
+        const response = await api.get('/dashboard/activity', {
+          params: currentRole ? { role: currentRole } : {}
+        })
         set({ 
           recentActivity: response.data,
           isLoading: false,
           lastUpdated: new Date()
         })
       } catch (error: any) {
-        const message = error.response?.data?.detail || 'Failed to fetch recent activity'
+        const message = 'Failed to fetch recent activity'
         set({ error: message, isLoading: false })
-        toast.error(message)
+        // Only show error toast for network/server errors, not auth errors
+        if (error.response?.status !== 401) {
+          toast.error(message)
+        }
       }
-    },
-
-    fetchAllDashboardData: async () => {
+    },fetchAllDashboardData: async () => {
       try {
         set({ isLoading: true, error: null })
         
@@ -143,9 +166,12 @@ export const useDashboardStore = create<DashboardState>()(
           lastUpdated: new Date()
         })
       } catch (error: any) {
-        const message = error.response?.data?.detail || 'Failed to fetch dashboard data'
+        const message = 'Failed to fetch dashboard data'
         set({ error: message, isLoading: false })
-        toast.error(message)
+        // Only show error toast for network/server errors, not auth errors
+        if (error.response?.status !== 401) {
+          toast.error(message)
+        }
       }
     },
 

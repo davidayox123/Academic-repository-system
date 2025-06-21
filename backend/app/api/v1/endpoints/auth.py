@@ -32,22 +32,41 @@ router = APIRouter()
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
     
-    # Check if user already exists
-    if get_user_by_email(db, user_data.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
-    # Validate password strength
-    is_strong, errors = is_password_strong(user_data.password)
-    if not is_strong:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"message": "Password does not meet requirements", "errors": errors}
-        )
-    
-    # Check if department exists
+    try:
+        print(f"🔄 Registration attempt for: {user_data.email}")
+        
+        # Check if user already exists
+        print("🔍 Checking if user exists...")
+        existing_user = get_user_by_email(db, user_data.email)
+        if existing_user:
+            print("❌ User already exists")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        print("✅ User doesn't exist, proceeding...")
+        
+        # Validate password strength
+        print("🔍 Validating password...")
+        is_strong, errors = is_password_strong(user_data.password)
+        if not is_strong:
+            print(f"❌ Password validation failed: {errors}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"message": "Password does not meet requirements", "errors": errors}
+            )
+        
+        print("✅ Password validation passed")
+        
+        # Check if department exists
+        print(f"🔍 Checking department: {user_data.department_id}")
+        
+    except Exception as e:
+        print(f"❌ Registration error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     department = db.query(Department).filter(Department.id == user_data.department_id).first()
     if not department:
         raise HTTPException(

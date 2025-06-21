@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Users,
@@ -12,12 +12,55 @@ import {
   CheckCircle,
   Zap,
   Globe,
-  Award
+  Award,
+  GraduationCap,
+  UserCheck,
+  Crown,
+  UserCog
 } from 'lucide-react'
 import { useAuthStore } from '../stores/useAuthStore'
 
-const Home: React.FC = () => {
-  const { isAuthenticated } = useAuthStore()
+const Home: React.FC = () => {  const navigate = useNavigate()
+  const { selectRole } = useAuthStore()
+  const [selectedRole, setSelectedRole] = useState<string>('')
+
+  const roles = [
+    {
+      value: 'student',
+      label: 'Student',
+      icon: GraduationCap,
+      color: 'bg-blue-500',
+      description: 'Upload and manage your academic documents'
+    },
+    {
+      value: 'staff',
+      label: 'Staff',
+      icon: UserCheck,
+      color: 'bg-green-500',
+      description: 'Access departmental documents and resources'
+    },
+    {
+      value: 'supervisor',
+      label: 'Supervisor',
+      icon: UserCog,
+      color: 'bg-purple-500',
+      description: 'Review and approve student submissions'
+    },
+    {
+      value: 'admin',
+      label: 'Admin',
+      icon: Crown,
+      color: 'bg-red-500',
+      description: 'Full system access and user management'
+    }
+  ]
+
+  const handleGetStarted = () => {
+    if (selectedRole) {
+      selectRole(selectedRole as any)
+      navigate('/dashboard')
+    }
+  }
 
   const features = [
     {
@@ -102,30 +145,50 @@ const Home: React.FC = () => {
               <span className="gradient-text">Academic</span>
               <br />
               <span className="text-gray-900">Repository System</span>
-            </h1>
-
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            </h1>            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
               A comprehensive platform for managing academic documents, research papers, 
               and scholarly resources with advanced collaboration and review workflows.
-            </p>
+            </p>            {/* Role Selection */}
+            <div className="mb-8" id="role-selector">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose your role to get started:</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                {roles.map((role) => (
+                  <motion.div
+                    key={role.value}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedRole(role.value)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                      selectedRole === role.value
+                        ? 'border-blue-500 bg-blue-50 shadow-lg'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 ${role.color} rounded-xl flex items-center justify-center mb-3 mx-auto`}>
+                      <role.icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-2">{role.label}</h4>
+                    <p className="text-sm text-gray-600 text-center">{role.description}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              {isAuthenticated ? (
-                <Link to="/dashboard" className="btn-primary">
-                  Go to Dashboard
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
-              ) : (
-                <>
-                  <Link to="/register" className="btn-primary">
-                    Get Started Free
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
-                  <Link to="/login" className="btn-secondary">
-                    Sign In
-                  </Link>
-                </>
-              )}
+              <motion.button
+                whileHover={{ scale: selectedRole ? 1.05 : 1 }}
+                whileTap={{ scale: selectedRole ? 0.95 : 1 }}
+                onClick={handleGetStarted}
+                disabled={!selectedRole}
+                className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+                  selectedRole
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <span>Get Started</span>
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
             </div>
           </motion.div>
         </div>
@@ -298,18 +361,19 @@ const Home: React.FC = () => {
               Join thousands of academics and researchers who trust our platform 
               for their document management needs.
             </p>
-            
-            {!isAuthenticated && (
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <Link to="/register" className="btn-primary">
-                  Create Free Account
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
-                <Link to="/contact" className="btn-secondary">
-                  Contact Sales
-                </Link>
-              </div>
-            )}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  document.getElementById('role-selector')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
+              >
+                <span>Get Started Now</span>
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            </div>
           </motion.div>
         </div>
       </section>

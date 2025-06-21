@@ -252,11 +252,12 @@ const Upload: React.FC = () => {
           category: 'research',
           course_code: ''
         })
-      }, 2000)
-
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Upload failed. Please try again.'
-      toast.error(errorMessage)
+      }, 2000)    } catch (error: any) {
+      const errorMessage = 'Upload failed. Please try again.'
+      // Only show error toast for non-auth errors
+      if (error.response?.status !== 401) {
+        toast.error(errorMessage)
+      }
     } finally {
       setIsUploading(false)
     }
