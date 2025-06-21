@@ -1,85 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, LoginCredentials, RegisterData } from '../types'
+import { authApi } from '../services/api'
 import toast from 'react-hot-toast'
-
-// Mock API functions for now - will be replaced with actual API calls
-const mockAuthApi = {
-  login: async (credentials: LoginCredentials) => {
-    // Mock login response
-    return {
-      data: {
-        access_token: 'mock-token',
-        refresh_token: 'mock-refresh-token',
-        user: {
-          id: '1',
-          email: credentials.email,
-          first_name: 'John',
-          last_name: 'Doe',
-          role: 'student' as const,
-          department: 'Computer Science',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      }
-    }
-  },
-  register: async (data: RegisterData) => {
-    return {
-      data: {
-        access_token: 'mock-token',
-        refresh_token: 'mock-refresh-token',
-        user: {
-          id: '2',
-          email: data.email,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          role: data.role,
-          department: data.department,
-          student_id: data.student_id,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      }
-    }
-  },
-  refreshToken: async () => {
-    return {
-      data: {
-        access_token: 'new-mock-token',
-        refresh_token: 'new-mock-refresh-token',
-        user: {
-          id: '1',
-          email: 'user@example.com',
-          first_name: 'John',
-          last_name: 'Doe',
-          role: 'student' as const,
-          department: 'Computer Science',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      }
-    }
-  },
-  getCurrentUser: async () => {
-    return {
-      data: {
-        id: '1',
-        email: 'user@example.com',
-        first_name: 'John',
-        last_name: 'Doe',
-        role: 'student' as const,
-        department: 'Computer Science',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-    }
-  }
-}
 
 interface AuthState {
   user: User | null
@@ -111,12 +34,15 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isInitialized: false,
 
       // Actions
-      login: async (credentials: LoginCredentials) => {
-        try {
+      login: async (credentials: LoginCredentials) => {        try {
           set({ isLoading: true })
           
-          const response = await mockAuthApi.login(credentials)
+          const response = await authApi.login(credentials)
           const { access_token, refresh_token, user } = response.data
+
+          // Store tokens in localStorage for API interceptor
+          localStorage.setItem('auth-token', access_token)
+          localStorage.setItem('refresh-token', refresh_token)
 
           set({
             user,
@@ -126,21 +52,22 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             isLoading: false,
           })
 
-          toast.success(`Welcome back, ${user.first_name}!`)
+          toast.success(`Welcome back, ${user.name}!`)
         } catch (error: any) {
           set({ isLoading: false })
-          const message = error.response?.data?.message || 'Login failed'
+          const message = error.response?.data?.detail || 'Login failed'
           toast.error(message)
           throw error
         }
-      },
-
-      register: async (data: RegisterData) => {
+      },      register: async (data: RegisterData) => {
         try {
           set({ isLoading: true })
-          
-          const response = await mockAuthApi.register(data)
+            const response = await authApi.register(data)
           const { access_token, refresh_token, user } = response.data
+
+          // Store tokens in localStorage for API interceptor
+          localStorage.setItem('auth-token', access_token)
+          localStorage.setItem('refresh-token', refresh_token)
 
           set({
             user,
@@ -153,7 +80,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           toast.success('Registration successful! Welcome to Academic Repository.')
         } catch (error: any) {
           set({ isLoading: false })
-          const message = error.response?.data?.message || 'Registration failed'
+          const message = error.response?.data?.detail || 'Registration failed'
           toast.error(message)
           throw error
         }
@@ -180,15 +107,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           
           if (!refreshToken) {
             throw new Error('No refresh token available')
-          }
+          }          const response = await authApi.refreshToken(refreshToken)
+          const { access_token } = response.data
 
-          const response = await mockAuthApi.refreshToken()
-          const { access_token, refresh_token, user } = response.data
+          // Update localStorage
+          localStorage.setItem('auth-token', access_token)
 
           set({
-            user,
             token: access_token,
-            refreshToken: refresh_token,
             isAuthenticated: true,
           })
         } catch (error) {
@@ -205,16 +131,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             user: { ...user, ...updatedUser }
           })
         }
-      },
-
-      initialize: async () => {
+      },      initialize: async () => {
         try {
           const { token, refreshToken } = get()
           
           if (token) {
             try {
               // Verify token is still valid
-              const response = await mockAuthApi.getCurrentUser()
+              const response = await authApi.getCurrentUser()
               set({
                 user: response.data,
                 isAuthenticated: true,

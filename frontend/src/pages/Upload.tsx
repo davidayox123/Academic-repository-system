@@ -45,7 +45,7 @@ const Upload: React.FC = () => {
     title: '',
     description: '',
     tags: [],
-    department: user?.department || '',
+    department: user?.department_name || '',
     category: 'research',
     course_code: ''
   })
@@ -248,7 +248,7 @@ const Upload: React.FC = () => {
           title: '',
           description: '',
           tags: [],
-          department: user?.department || '',
+          department: user?.department_name || '',
           category: 'research',
           course_code: ''
         })

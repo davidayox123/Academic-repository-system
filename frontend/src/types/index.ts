@@ -1,12 +1,12 @@
 // User Types
 export interface User {
   id: string
+  name: string
   email: string
-  first_name: string
-  last_name: string
   role: UserRole
-  department: string
-  student_id?: string
+  department_id: string
+  department_name?: string
+  avatar?: string
   is_active: boolean
   created_at: string
   updated_at: string
@@ -102,13 +102,12 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
+  name: string
   email: string
   password: string
-  first_name: string
-  last_name: string
+  confirm_password: string
   role: UserRole
-  department: string
-  student_id?: string
+  department_id: string
 }
 
 export interface AuthResponse {

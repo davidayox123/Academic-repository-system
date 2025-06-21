@@ -12,8 +12,6 @@ import type {
   PaginatedResponse,
   DashboardStats,
   ActivityItem,
-  SearchResult,
-  Notification,
   AuditLog,
   DocumentStats,
   UserStats,
@@ -54,11 +52,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      try {
-        const refreshToken = localStorage.getItem('refresh-token')
+      try {        const refreshToken = localStorage.getItem('refresh-token')
         if (refreshToken) {
           const response = await authApi.refreshToken(refreshToken)
-          const { access_token } = response.data.data
+          const { access_token } = response.data
           
           localStorage.setItem('auth-token', access_token)
           originalRequest.headers.Authorization = `Bearer ${access_token}`
@@ -79,38 +76,33 @@ api.interceptors.response.use(
 
 // Authentication API
 export const authApi = {
-  login: (credentials: LoginCredentials): Promise<AxiosResponse<ApiResponse<{
+  login: (credentials: LoginCredentials): Promise<AxiosResponse<{
     access_token: string
     refresh_token: string
     token_type: string
-    expires_in: number
     user: User
-  }>>> => {
+  }>> => {
     return api.post('/auth/login', credentials)
   },
 
-  register: (data: RegisterData): Promise<AxiosResponse<ApiResponse<{
+  register: (data: RegisterData): Promise<AxiosResponse<{
     access_token: string
     refresh_token: string
     token_type: string
-    expires_in: number
     user: User
-  }>>> => {
+  }>> => {
     return api.post('/auth/register', data)
-  },
-
-  refreshToken: (refreshToken: string): Promise<AxiosResponse<ApiResponse<{
+  },refreshToken: (refreshToken: string): Promise<AxiosResponse<{
     access_token: string
-    refresh_token: string
     token_type: string
-    expires_in: number
-    user: User
-  }>>> => {
-    return api.post('/auth/refresh', { refresh_token: refreshToken })
-  },
-
-  getCurrentUser: (): Promise<AxiosResponse<ApiResponse<User>>> => {
-    return api.get('/auth/me')
+  }>> => {
+    return api.post('/auth/refresh', {}, {
+      headers: {
+        Authorization: `Bearer ${refreshToken}`
+      }
+    })
+  },  getCurrentUser: (): Promise<AxiosResponse<User>> => {
+    return api.get('/auth/profile')
   },
 
   updateProfile: (data: Partial<User>): Promise<AxiosResponse<ApiResponse<User>>> => {
