@@ -1,24 +1,9 @@
 import React, { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
-import { 
-  Upload as UploadIcon, 
-  File, 
-  X, 
-  CheckCircle, 
-  AlertCircle,
-  Loader2,
-  FileText,
-  Image,
-  Music,
-  Video,
-  Archive,
-  Plus,
-  Tag
-} from 'lucide-react'
+import { toast } from 'react-hot-toast'
+import { FileText, Image, Video, Music, Archive, File } from 'lucide-react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { documentsApi } from '../services/api'
-import toast from 'react-hot-toast'
 
 interface UploadFile extends File {
   id: string
@@ -41,6 +26,7 @@ const Upload: React.FC = () => {
   const { user } = useAuthStore()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [currentTag, setCurrentTag] = useState('')
   const [metadata, setMetadata] = useState<DocumentMetadata>({
     title: '',
     description: '',
@@ -49,72 +35,37 @@ const Upload: React.FC = () => {
     category: 'research',
     course_code: ''
   })
-  const [currentTag, setCurrentTag] = useState('')
-
-  // File type configurations
-  const acceptedFileTypes = {
-    'application/pdf': ['.pdf'],
-    'application/msword': ['.doc'],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    'application/vnd.ms-powerpoint': ['.ppt'],
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-    'text/plain': ['.txt'],
-    'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-    'video/*': ['.mp4', '.webm', '.mov'],
-    'audio/*': ['.mp3', '.wav', '.ogg']
-  }
 
   const maxFileSize = 50 * 1024 * 1024 // 50MB
   const maxFiles = 10
 
-  const categories = [
-    'research',
-    'thesis',
-    'assignment',
-    'presentation',
-    'paper',
-    'report',
-    'project',
-    'other'
-  ]
+  const acceptedFileTypes = {
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'text/plain': ['.txt'],
+    'text/markdown': ['.md'],
+    'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'],
+    'video/*': ['.mp4', '.webm', '.mov', '.avi'],
+    'audio/*': ['.mp3', '.wav', '.ogg']
+  }
 
-  const departments = [
-    'Computer Science',
-    'Engineering',
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Psychology',
-    'Economics',
-    'Literature',
-    'History',
-    'Philosophy',
-    'Art & Design',
-    'Music',
-    'Medicine',
-    'Law',
-    'Business',
-    'Education',
-    'Other'
-  ]
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0 || isNaN(bytes)) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
 
   const getFileIcon = (file: File) => {
-    const type = file.type
+    const type = file.type || ''
     if (type.startsWith('image/')) return Image
     if (type.startsWith('video/')) return Video
     if (type.startsWith('audio/')) return Music
     if (type.includes('pdf') || type.includes('document') || type.includes('text')) return FileText
     if (type.includes('zip') || type.includes('rar')) return Archive
     return File
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
@@ -133,13 +84,15 @@ const Upload: React.FC = () => {
     })
 
     // Handle accepted files
-    const newFiles: UploadFile[] = acceptedFiles.map(file => ({
-      ...file,
-      id: Math.random().toString(36).substring(7),
-      progress: 0,
-      status: 'pending',
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-    }))
+    const newFiles: UploadFile[] = acceptedFiles.map((file, index) => {
+      const uploadFile = Object.assign(file, {
+        id: `${Date.now()}_${index}`,
+        progress: 0,
+        status: 'pending' as const,
+        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+      })
+      return uploadFile as UploadFile
+    })
 
     setFiles(prev => [...prev, ...newFiles])
   }, [maxFileSize])
@@ -188,6 +141,7 @@ const Upload: React.FC = () => {
     }
     return true
   }
+
   const uploadFiles = async () => {
     if (!validateForm()) return
 
@@ -205,9 +159,9 @@ const Upload: React.FC = () => {
         formData.append('title', metadata.title)
         formData.append('description', metadata.description)
         formData.append('category', metadata.category)
-        formData.append('department', metadata.department)
-        formData.append('course_code', metadata.course_code)
         formData.append('tags', metadata.tags.join(','))
+        formData.append('course_code', metadata.course_code)
+        formData.append('is_public', 'false')
 
         try {
           const response = await documentsApi.uploadDocument(formData, (progressEvent) => {
@@ -252,306 +206,225 @@ const Upload: React.FC = () => {
           category: 'research',
           course_code: ''
         })
-      }, 2000)    } catch (error: any) {
-      const errorMessage = 'Upload failed. Please try again.'
-      // Only show error toast for non-auth errors
-      if (error.response?.status !== 401) {
-        toast.error(errorMessage)
-      }
+      }, 2000)
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error('Upload failed. Please try again.')
     } finally {
       setIsUploading(false)
     }
   }
 
   return (
-    <div className="page-container">
-      <div className="content-wrapper max-w-4xl">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="w-16 h-16 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <UploadIcon className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="section-header">Upload Documents</h1>
-          <p className="text-xl text-gray-600">
-            Share your academic work with the community
-          </p>
-        </motion.div>
-
-        {/* Upload Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Metadata Form */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-1 space-y-6"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Upload Documents</h1>
+          
+          {/* Upload Area */}
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              isDragActive 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 hover:border-blue-400'
+            }`}
           >
-            <div className="glass p-6 rounded-2xl">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Document Information</h3>
-              
-              {/* Title */}
-              <div className="form-group">
-                <label htmlFor="title" className="form-label">Title</label>
+            <input {...getInputProps()} />
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                <FileText className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-lg font-medium text-gray-900">
+                  Drop files here or click to browse
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Support for PDF, DOC, images, videos and more
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Maximum file size: {formatFileSize(maxFileSize)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* File List */}
+          {files.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Selected Files ({files.length})
+              </h3>
+              <div className="space-y-3">
+                {files.map(file => {
+                  const FileIcon = getFileIcon(file)
+                  return (
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-4 p-3 bg-white/50 rounded-xl"
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <FileIcon className="w-5 h-5 text-gray-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(file.size)}
+                        </p>
+                        
+                        {/* Progress Bar */}
+                        {file.status === 'uploading' && (
+                          <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${file.progress}%` }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Status */}
+                        {file.status === 'success' && (
+                          <p className="text-xs text-green-600 mt-1">Uploaded successfully</p>
+                        )}
+                        {file.status === 'error' && (
+                          <p className="text-xs text-red-600 mt-1">{file.error}</p>
+                        )}
+                      </div>
+                      
+                      <button
+                        onClick={() => removeFile(file.id)}
+                        className="flex-shrink-0 w-8 h-8 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors"
+                        disabled={file.status === 'uploading'}
+                      >
+                        <span className="text-red-600 text-sm">×</span>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Metadata Form */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title *
+                </label>
                 <input
-                  id="title"
                   type="text"
                   value={metadata.title}
                   onChange={(e) => setMetadata(prev => ({ ...prev, title: e.target.value }))}
-                  className="form-input"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter document title"
                 />
               </div>
 
-              {/* Description */}
-              <div className="form-group">
-                <label htmlFor="description" className="form-label">Description</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
                 <textarea
-                  id="description"
-                  rows={4}
                   value={metadata.description}
                   onChange={(e) => setMetadata(prev => ({ ...prev, description: e.target.value }))}
-                  className="form-input resize-none"
-                  placeholder="Describe your document..."
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Describe your document"
                 />
               </div>
 
-              {/* Category */}
-              <div className="form-group">
-                <label htmlFor="category" className="form-label">Category</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
                 <select
-                  id="category"
                   value={metadata.category}
                   onChange={(e) => setMetadata(prev => ({ ...prev, category: e.target.value }))}
-                  className="form-input"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {categories.map(category => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </option>
-                  ))}
+                  <option value="research">Research</option>
+                  <option value="thesis">Thesis</option>
+                  <option value="assignment">Assignment</option>
+                  <option value="presentation">Presentation</option>
+                  <option value="paper">Paper</option>
+                  <option value="report">Report</option>
+                  <option value="project">Project</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
+            </div>
 
-              {/* Department */}
-              <div className="form-group">
-                <label htmlFor="department" className="form-label">Department</label>
-                <select
-                  id="department"
-                  value={metadata.department}
-                  onChange={(e) => setMetadata(prev => ({ ...prev, department: e.target.value }))}
-                  className="form-input"
-                >
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Course Code
+                </label>
+                <input
+                  type="text"
+                  value={metadata.course_code}
+                  onChange={(e) => setMetadata(prev => ({ ...prev, course_code: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., CS101"
+                />
               </div>
 
-              {/* Tags */}
-              <div className="form-group">
-                <label className="form-label">Tags</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags
+                </label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={currentTag}
                     onChange={(e) => setCurrentTag(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    className="form-input flex-1"
-                    placeholder="Add tag..."
+                    onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Add a tag"
                   />
                   <button
                     type="button"
                     onClick={addTag}
-                    className="btn-secondary px-3"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <Plus className="w-4 h-4" />
+                    Add
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {metadata.tags.map(tag => (
+                  {metadata.tags.map((tag, index) => (
                     <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-lg"
+                      key={index}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                     >
-                      <Tag className="w-3 h-3" />
                       {tag}
                       <button
-                        type="button"
                         onClick={() => removeTag(tag)}
                         className="text-blue-600 hover:text-blue-800"
                       >
-                        <X className="w-3 h-3" />
+                        ×
                       </button>
                     </span>
-                  ))}                </div>
-              </div>
-
-              {/* Course Code */}
-              <div className="form-group">
-                <label className="form-label">Course Code</label>
-                <input
-                  type="text"
-                  value={metadata.course_code}
-                  onChange={(e) => setMetadata(prev => ({ ...prev, course_code: e.target.value }))}
-                  className="form-input"
-                  placeholder="e.g., CS101, MATH201"
-                />
-              </div>
-            </div>
-          </motion.div>
-
-          {/* File Upload Area */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-2 space-y-6"
-          >
-            {/* Dropzone */}
-            <div
-              {...getRootProps()}
-              className={`glass p-8 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer ${
-                isDragActive 
-                  ? 'border-blue-500 bg-blue-50/50' 
-                  : 'border-gray-300 hover:border-blue-400'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <div className="text-center">
-                <motion.div
-                  animate={isDragActive ? { scale: 1.05 } : { scale: 1 }}
-                  className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                >
-                  <UploadIcon className="w-8 h-8 text-blue-600" />
-                </motion.div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {isDragActive ? 'Drop files here' : 'Drag & drop files here'}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  or click to select files ({maxFiles - files.length} remaining)
-                </p>
-                <div className="text-sm text-gray-500">
-                  <p>Supported formats: PDF, DOC, DOCX, PPT, PPTX, TXT, Images, Videos, Audio</p>
-                  <p>Maximum file size: {formatFileSize(maxFileSize)}</p>
+                  ))}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* File List */}
-            <AnimatePresence>
-              {files.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="glass p-6 rounded-2xl"
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Selected Files ({files.length})
-                  </h3>
-                  <div className="space-y-3">
-                    {files.map(file => {
-                      const FileIcon = getFileIcon(file)
-                      return (
-                        <motion.div
-                          key={file.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 20 }}
-                          className="flex items-center gap-4 p-3 bg-white/50 rounded-xl"
-                        >
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <FileIcon className="w-5 h-5 text-gray-600" />
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatFileSize(file.size)}
-                            </p>
-                            
-                            {/* Progress Bar */}
-                            {file.status === 'uploading' && (
-                              <div className="mt-2">
-                                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                  <div 
-                                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${file.progress}%` }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">{file.progress}%</p>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {file.status === 'pending' && (
-                              <div className="w-5 h-5 text-gray-400">
-                                <AlertCircle className="w-5 h-5" />
-                              </div>
-                            )}
-                            {file.status === 'uploading' && (
-                              <div className="w-5 h-5 text-blue-600">
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                              </div>
-                            )}
-                            {file.status === 'success' && (
-                              <div className="w-5 h-5 text-green-600">
-                                <CheckCircle className="w-5 h-5" />
-                              </div>
-                            )}
-                            {file.status === 'error' && (
-                              <div className="w-5 h-5 text-red-600">
-                                <AlertCircle className="w-5 h-5" />
-                              </div>
-                            )}
-                            
-                            {!isUploading && (
-                              <button
-                                onClick={() => removeFile(file.id)}
-                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </motion.div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Upload Button */}
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      onClick={uploadFiles}
-                      disabled={isUploading || files.some(f => f.status === 'uploading')}
-                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <UploadIcon className="w-5 h-5 mr-2" />
-                          Upload Files
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          {/* Upload Button */}
+          <div className="mt-8 flex justify-end">
+            <button
+              onClick={uploadFiles}
+              disabled={isUploading || files.length === 0}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isUploading ? 'Uploading...' : 'Upload Files'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

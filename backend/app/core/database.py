@@ -11,6 +11,9 @@ engine = create_engine(
     echo=settings.DATABASE_ECHO,
     pool_pre_ping=True,
     pool_recycle=300,
+    pool_size=10,  # Increase pool size
+    max_overflow=20,  # Allow more overflow connections
+    pool_timeout=30,  # Timeout for getting connection
     connect_args={"charset": "utf8mb4"}
 )
 
@@ -29,8 +32,14 @@ def get_db() -> Generator[Session, None, None]:
         db.rollback()
         raise
     finally:
-        db.close()
-        db.close()
+        try:
+            db.close()
+        except Exception as e:
+            logging.error(f"Error closing database connection: {e}")
+
+# Synchronous database operations
+def get_sync_db() -> Session:
+    return SessionLocal()
 
 # Create database tables
 def create_tables():

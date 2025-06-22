@@ -44,3 +44,11 @@ class DocumentListResponse(BaseModel):
     page: int
     pages: int
     per_page: int
+
+class DocumentFilter(BaseModel):
+    search: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    department_id: Optional[str] = None
+    sort_by: str = "upload_date"
+    sort_order: str = "desc"

@@ -6,17 +6,20 @@ from typing import List, Optional, Dict, Any
 import os
 import uuid
 import shutil
+import logging
 from pathlib import Path
 from datetime import datetime
 import json
 import mimetypes
 import aiofiles
+import hashlib
 from PIL import Image
 import fitz  # PyMuPDF for PDF processing
 
 from app.core.database import get_db
 from app.models.user import User, UserRole
 from app.models.document import Document, DocumentStatus, DocumentCategory, DocumentType
+from app.models.department import Department
 from app.models.activity_log import ActivityLog, ActivityType, ActivityLevel
 from app.models.download import Download
 from app.schemas.document import DocumentCreate, DocumentResponse, DocumentUpdate, DocumentFilter
@@ -189,29 +192,82 @@ async def log_activity(
 
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
-    request: Request,
     file: UploadFile = File(...),
     title: str = Form(...),
-    description: Optional[str] = Form(None),
-    category: str = Form(...),
-    tags: Optional[str] = Form(None),
-    department_id: Optional[str] = Form(None),
-    course_code: Optional[str] = Form(None),
-    academic_year: Optional[str] = Form(None),
-    semester: Optional[str] = Form(None),
+    description: str = Form(""),
+    category: str = Form("research"),
+    tags: str = Form(""),
+    department_id: str = Form(""),
+    course_code: str = Form(""),
     is_public: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     """Upload a new document"""
-    # Validate file
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file selected")
-    
-    if not validate_file_type(file.filename):
-        raise HTTPException(
-            status_code=400, 
-            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+    try:
+        # Basic validation
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No file selected")
+        
+        # Get file extension
+        file_ext = Path(file.filename).suffix.lower()
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"File type {file_ext} not allowed")
+        
+        # Read file content
+        content = await file.read()
+        if len(content) == 0:
+            raise HTTPException(status_code=400, detail="Empty file")
+        
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File too large")
+        
+        # Get first department if none provided
+        if not department_id:
+            first_dept = db.query(Department).first()
+            department_id = first_dept.id if first_dept else None
+        
+        # Create document record
+        document_id = str(uuid.uuid4())
+        filename = f"{document_id}{file_ext}"
+        file_path = DOCUMENTS_DIR / filename
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        # Create database record
+        document = Document(
+            id=document_id,
+            title=title,
+            description=description,
+            filename=filename,
+            original_filename=file.filename,
+            file_path=str(file_path),
+            file_size=len(content),
+            content_type=file.content_type or "application/octet-stream",
+            file_hash=hashlib.md5(content).hexdigest(),
+            category=DocumentCategory(category),
+            document_type=get_document_type(file.filename),
+            tags=tags.split(',') if tags else [],
+            department_id=department_id,
+            course_code=course_code,
+            author_id="1",  # Mock user ID
+            is_public=is_public,
+            status=DocumentStatus.PENDING
         )
+        
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+        
+        return document
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Upload error: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
     
     # Check file size
     file_size = 0

@@ -119,39 +119,37 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
     )
-  }
-
-  // Stats configuration
+  }  // Stats configuration
   const statsConfig = stats ? [
     {
       title: 'Total Documents',
-      value: stats.total_documents.value.toString(),
-      change: stats.total_documents.change,
-      changeType: stats.total_documents.change_type,
+      value: stats.total_documents?.toString() || '0',
+      change: 0, // We don't have change tracking yet
+      changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: FileText,
       color: 'blue'
     },
     {
       title: 'Pending Reviews',
-      value: stats.pending_reviews.value.toString(),
-      change: stats.pending_reviews.change,
-      changeType: stats.pending_reviews.change_type,
+      value: stats.pending_reviews?.toString() || '0',
+      change: 0,
+      changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: Clock,
       color: 'yellow'
     },
     {
       title: 'Approved',
-      value: stats.approved_documents.value.toString(),
-      change: stats.approved_documents.change,
-      changeType: stats.approved_documents.change_type,
+      value: stats.approved_documents?.toString() || '0',
+      change: 0,
+      changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: CheckCircle,
       color: 'green'
     },
     {
       title: 'Downloads',
-      value: stats.total_downloads.value.toString(),
-      change: stats.total_downloads.change,
-      changeType: stats.total_downloads.change_type,
+      value: stats.total_downloads?.toString() || '0',
+      change: 0,
+      changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: Download,
       color: 'purple'
     }
@@ -165,10 +163,9 @@ const Dashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between">            <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {user?.first_name}!
+                Welcome back, {user?.name}!
               </h1>
               <p className="text-gray-600">
                 Here's what's happening with your documents today.
@@ -227,9 +224,12 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 bg-${stat.color}-100 rounded-xl flex items-center justify-center`}>
                   <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-                </div>
-                <div className={`text-sm font-medium ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.change}
+                </div>                <div className={`text-sm font-medium ${
+                  stat.changeType === 'positive' ? 'text-green-600' : 
+                  stat.changeType === 'negative' ? 'text-red-600' : 
+                  'text-gray-600'
+                }`}>
+                  {stat.change !== 0 ? (stat.change > 0 ? '+' : '') + stat.change : ''}
                 </div>
               </div>
               <div className="text-2xl font-bold text-gray-900 mb-1">

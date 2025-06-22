@@ -54,9 +54,8 @@ class ActivityLog(Base):
     user_id = Column(CHAR(36), ForeignKey("users.id"), nullable=True, index=True)
     document_id = Column(CHAR(36), ForeignKey("documents.id"), nullable=True, index=True)
     department_id = Column(CHAR(36), ForeignKey("departments.id"), nullable=True, index=True)
-    
-    # Additional data
-    metadata = Column(JSON, nullable=True)  # Store additional context as JSON
+      # Additional data
+    activity_metadata = Column(JSON, nullable=True)  # Store additional context as JSON
     ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
     user_agent = Column(String(500), nullable=True)
     

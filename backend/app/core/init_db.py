@@ -2,8 +2,8 @@
 Database initialization script with sample data
 """
 import asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
-from ..core.database import engine, get_db
+from sqlalchemy.orm import Session
+from .database import engine, get_sync_db
 from ..models import *
 import uuid
 from datetime import datetime, timedelta
@@ -235,39 +235,49 @@ async def create_sample_activity_logs(users, documents):
 
 async def init_database():
     """Initialize database with sample data"""
-    async with AsyncSession(engine) as session:
-        try:
-            # Create departments
-            departments = await create_sample_departments()
-            session.add_all(departments)
-            await session.flush()  # Get IDs
+    session = get_sync_db()
+    try:
+        # Check if data already exists
+        if session.query(Department).first():
+            print("✅ Database already has sample data")
+            return
             
-            # Create users
-            users = await create_sample_users(departments)
-            session.add_all(users)
-            await session.flush()  # Get IDs
-            
-            # Create documents
-            documents = await create_sample_documents(users, departments)
-            session.add_all(documents)
-            await session.flush()  # Get IDs
-            
-            # Create activity logs
-            activity_logs = await create_sample_activity_logs(users, documents)
-            session.add_all(activity_logs)
-            
-            # Update department statistics
-            for dept in departments:
-                dept.total_users = len([u for u in users if u.department_id == dept.id])
-                dept.total_documents = len([d for d in documents if d.department_id == dept.id])
-            
-            await session.commit()
-            print("✅ Database initialized successfully with sample data!")
-            
-        except Exception as e:
-            await session.rollback()
-            print(f"❌ Error initializing database: {e}")
-            raise
+        # Create departments
+        departments = await create_sample_departments()
+        session.add_all(departments)
+        session.flush()  # Get IDs
+        
+        # Create users
+        users = await create_sample_users(departments)
+        session.add_all(users)
+        session.flush()  # Get IDs
+        
+        # Create documents
+        documents = await create_sample_documents(users, departments)
+        session.add_all(documents)
+        session.flush()  # Get IDs
+        
+        # Create activity logs
+        activity_logs = await create_sample_activity_logs(users, documents)
+        session.add_all(activity_logs)
+        
+        # Update department statistics
+        for dept in departments:
+            dept.total_users = len([u for u in users if u.department_id == dept.id])
+            dept.total_documents = len([d for d in documents if d.department_id == dept.id])
+        
+        session.commit()
+        print("✅ Database initialized successfully with sample data!")
+        
+    except Exception as e:
+        session.rollback()
+        print(f"❌ Error initializing database: {e}")
+        raise
+    finally:
+        session.close()
+
+# Alias for backwards compatibility
+init_sample_data = init_database
 
 if __name__ == "__main__":
     asyncio.run(init_database())
