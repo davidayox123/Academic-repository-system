@@ -39,7 +39,7 @@ class DocumentType(str, enum.Enum):
 class Document(Base):
     __tablename__ = "documents"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()), name="document_id")
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     
@@ -69,11 +69,10 @@ class Document(Base):
     status = Column(Enum(DocumentStatus, native_enum=False), default=DocumentStatus.PENDING, index=True)
     is_public = Column(Boolean, default=False, index=True)
     is_featured = Column(Boolean, default=False)
-    
-    # Foreign Keys
-    uploader_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
-    department_id = Column(CHAR(36), ForeignKey("departments.id"), nullable=False, index=True)
-    supervisor_id = Column(CHAR(36), ForeignKey("users.id"), nullable=True, index=True)
+      # Foreign Keys
+    uploader_id = Column(CHAR(36), ForeignKey("users.user_id"), nullable=False, index=True)
+    department_id = Column(CHAR(36), ForeignKey("departments.department_id"), nullable=False, index=True)
+    supervisor_id = Column(CHAR(36), ForeignKey("users.user_id"), nullable=True, index=True)
     
     # Review and approval
     approval_date = Column(DateTime(timezone=True), nullable=True)
@@ -91,10 +90,9 @@ class Document(Base):
     view_count = Column(Integer, default=0)
     like_count = Column(Integer, default=0)
     share_count = Column(Integer, default=0)
-    
-    # Version control
+      # Version control
     version = Column(String(20), default="1.0")
-    parent_document_id = Column(CHAR(36), ForeignKey("documents.id"), nullable=True)
+    parent_document_id = Column(CHAR(36), ForeignKey("documents.document_id"), nullable=True)
     
     # Security and access
     access_level = Column(String(20), default="department")  # public, department, private
@@ -112,12 +110,12 @@ class Document(Base):
     department = relationship("Department", back_populates="documents")
     
     # Version relationships
-    parent_document = relationship("Document", remote_side=[id], backref="versions")
-    
-    # One-to-many relationships
+    parent_document = relationship("Document", remote_side=[id], backref="versions")    # One-to-many relationships
     reviews = relationship("Review", back_populates="document", cascade="all, delete-orphan")
     downloads = relationship("Download", back_populates="document", cascade="all, delete-orphan")
-    activity_logs = relationship("ActivityLog", back_populates="document", cascade="all, delete-orphan")
+    
+    # One-to-one relationship with metadata
+    document_metadata = relationship("Metadata", back_populates="document", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Document(id={self.id}, title={self.title}, status={self.status})>"

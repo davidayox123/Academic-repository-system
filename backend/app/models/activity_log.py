@@ -40,7 +40,7 @@ class ActivityLevel(str, enum.Enum):
     SUCCESS = "success"
 
 class ActivityLog(Base):
-    __tablename__ = "activity_logs"
+    __tablename__ = "audit_log"
 
     id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     

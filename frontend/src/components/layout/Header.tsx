@@ -12,14 +12,15 @@ import {
   Moon,
   Sun,
   Monitor,
-  UserCheck
+  UserCheck,
+  LogOut
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/useAuthStore'
 import { useThemeStore } from '../../stores/useThemeStore'
 
 const Header: React.FC = () => {
   const location = useLocation()
-  const { currentRole, switchRole, hasSelectedRole } = useAuthStore()
+  const { currentRole, switchRole, hasSelectedRole, logout } = useAuthStore()
   const { theme, resolvedTheme, setTheme } = useThemeStore()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false)
@@ -192,8 +193,19 @@ const Header: React.FC = () => {
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
+              </AnimatePresence>            </div>
+
+            {/* Logout Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={logout}
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </motion.button>
 
             {/* Mobile Menu Button */}
             <motion.button

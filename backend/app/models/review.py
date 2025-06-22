@@ -20,11 +20,11 @@ class ReviewDecision(str, enum.Enum):
 class Review(Base):
     __tablename__ = "reviews"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()), name="review_id")
     
     # Foreign Keys
-    document_id = Column(CHAR(36), ForeignKey("documents.id"), nullable=False, index=True)
-    reviewer_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
+    document_id = Column(CHAR(36), ForeignKey("documents.document_id"), nullable=False, index=True)
+    reviewer_id = Column(CHAR(36), ForeignKey("users.user_id"), nullable=False, index=True)
     
     # Review content
     status = Column(Enum(ReviewStatus, native_enum=False), default=ReviewStatus.PENDING, index=True)

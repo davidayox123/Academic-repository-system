@@ -1,12 +1,38 @@
 // User Types
 export interface User {
   id: string
-  name: string
+  first_name: string
+  last_name: string
+  full_name: string
   email: string
   role: UserRole
   department_id: string
   department_name?: string
   avatar?: string
+  phone?: string
+  date_of_birth?: string
+  address?: string
+  
+  // Student-specific fields
+  student_id?: string
+  year_of_study?: number
+  gpa?: string
+  enrollment_date?: string
+  graduation_date?: string
+  
+  // Staff-specific fields
+  employee_id?: string
+  position?: string
+  hire_date?: string
+  office_location?: string
+  
+  // Supervisor-specific fields
+  title?: string
+  specialization?: string
+  research_interests?: string
+  qualifications?: string
+  years_of_experience?: number
+  
   is_active: boolean
   created_at: string
   updated_at: string

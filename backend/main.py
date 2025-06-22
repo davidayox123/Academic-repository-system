@@ -20,12 +20,12 @@ from app.models import User
 # Create database tables
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    Base.metadata.create_all(bind=engine)
+    # Startup - Skip table creation since we already have the database
+    # Base.metadata.create_all(bind=engine)
     
-    # Initialize database with sample data
-    from app.core.init_db import init_sample_data
-    await init_sample_data()
+    # Initialize database with sample data - Skip since we have sample data
+    # from app.core.init_db import init_sample_data
+    # await init_sample_data()
     
     yield
     # Shutdown

@@ -7,11 +7,11 @@ import uuid
 from ..core.database import Base
 
 class AuditLog(Base):
-    __tablename__ = "audit_logs"
+    __tablename__ = "audit_log"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
-    document_id = Column(String(36), ForeignKey("documents.id"), nullable=True, index=True)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()), name="log_id")
+    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=False, index=True)
+    document_id = Column(String(36), ForeignKey("documents.document_id"), nullable=True, index=True)
     
     # Action details as per specification
     action = Column(String(100), nullable=False, index=True)  # Upload, Approve, Reject, Edit, Delete, Download

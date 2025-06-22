@@ -1,11 +1,15 @@
 import { useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useThemeStore } from './stores/useThemeStore'
+import { useAuthStore } from './stores/useAuthStore'
 
 // Layout Components
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
+
+// Auth Components
+import Login from './pages/auth/Login'
 
 // Pages
 import Home from './pages/Home'
@@ -17,9 +21,16 @@ import Profile from './pages/Profile'
 import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
 
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuthStore()
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+}
+
 function App() {
   const location = useLocation()
   const { resolvedTheme } = useThemeStore()
+  const { isAuthenticated } = useAuthStore()
 
   // Apply theme to document on mount and theme changes
   useEffect(() => {
@@ -64,22 +75,58 @@ function App() {
         </div>
       </div>
 
-      <Header />
-      <main className="relative z-10 pt-16">
+      {/* Show header only when authenticated */}
+      {isAuthenticated && <Header />}
+      
+      <main className={`relative z-10 ${isAuthenticated ? 'pt-16' : ''}`}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/documents/:id" element={<DocumentDetail />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/admin" element={<Admin />} />
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/documents" element={
+              <ProtectedRoute>
+                <Documents />
+              </ProtectedRoute>
+            } />
+            <Route path="/documents/:id" element={
+              <ProtectedRoute>
+                <DocumentDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/upload" element={
+              <ProtectedRoute>
+                <Upload />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
       </main>
-      <Footer />
+      
+      {/* Show footer only when authenticated */}
+      {isAuthenticated && <Footer />}
     </div>
   )
 }

@@ -9,8 +9,8 @@ from ..core.database import Base
 class Metadata(Base):
     __tablename__ = "metadata"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    document_id = Column(String(36), ForeignKey("documents.id"), nullable=False, unique=True, index=True)
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()), name="metadata_id")
+    document_id = Column(String(36), ForeignKey("documents.document_id"), nullable=False, unique=True, index=True)
     
     # Metadata fields as per specification
     keywords = Column(Text, nullable=False)  # Comma-separated or JSON

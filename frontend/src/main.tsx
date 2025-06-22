@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { useAuthStore } from './stores/useAuthStore'
 import App from './App.tsx'
 import './index.css'
 
@@ -16,11 +17,25 @@ const queryClient = new QueryClient({
   },
 })
 
+// App wrapper to handle initial redirect
+const AppWrapper = () => {
+  const { isAuthenticated } = useAuthStore()
+  
+  // If not authenticated and not on login page, redirect to login
+  React.useEffect(() => {
+    if (!isAuthenticated && window.location.pathname !== '/login') {
+      window.location.href = '/login'
+    }
+  }, [isAuthenticated])
+
+  return <App />
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <AppWrapper />
         <Toaster
           position="top-right"
           toastOptions={{

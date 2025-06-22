@@ -200,38 +200,7 @@ async def create_sample_documents(users, departments):
             view_count=random.randint(10, 200)
         )
         documents.append(doc)
-    
     return documents
-
-async def create_sample_activity_logs(users, documents):
-    """Create sample activity logs"""
-    logs = []
-    
-    activities = [
-        (ActivityType.DOCUMENT_UPLOADED, "Document uploaded successfully"),
-        (ActivityType.DOCUMENT_VIEWED, "Document viewed"),
-        (ActivityType.DOCUMENT_DOWNLOADED, "Document downloaded"),
-        (ActivityType.REVIEW_ASSIGNED, "Review assigned to supervisor"),
-        (ActivityType.DOCUMENT_APPROVED, "Document approved by supervisor")
-    ]
-    
-    for doc in documents:
-        for activity_type, title in activities:
-            if random.choice([True, False]):  # Randomly create some activities
-                log = ActivityLog(
-                    activity_type=activity_type,
-                    title=title,
-                    description=f"{title} for document: {doc.title}",
-                    user_id=doc.uploader_id,
-                    document_id=doc.id,
-                    department_id=doc.department_id,
-                    category="academic",
-                    is_public='1' if activity_type in [ActivityType.DOCUMENT_UPLOADED, ActivityType.DOCUMENT_APPROVED] else '0',
-                    timestamp=datetime.now() - timedelta(hours=random.randint(1, 72))
-                )
-                logs.append(log)
-    
-    return logs
 
 async def init_database():
     """Initialize database with sample data"""
@@ -251,15 +220,10 @@ async def init_database():
         users = await create_sample_users(departments)
         session.add_all(users)
         session.flush()  # Get IDs
-        
-        # Create documents
+          # Create documents
         documents = await create_sample_documents(users, departments)
         session.add_all(documents)
         session.flush()  # Get IDs
-        
-        # Create activity logs
-        activity_logs = await create_sample_activity_logs(users, documents)
-        session.add_all(activity_logs)
         
         # Update department statistics
         for dept in departments:

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from ....core.database import get_db
 from ....models import (
     User, Document, DocumentStatus, UserRole, Department, 
-    Review, ActivityLog, Download, ActivityType
+    Review, Download
 )
 
 router = APIRouter()
@@ -224,63 +224,11 @@ async def get_recent_activity(
 ):
     """
     Get recent activity feed based on user role
+    Note: ActivityLog feature is disabled - returning empty data
     """
     try:
-        query = db.query(ActivityLog).options(
-            joinedload(ActivityLog.user),
-            joinedload(ActivityLog.document)
-        )
-        
-        # Apply role-based filtering
-        if role == "admin":
-            # Admin sees all activities
-            pass
-        elif role == "supervisor":
-            # Supervisor sees department activities and review-related activities
-            if department_id:
-                query = query.filter(
-                    or_(
-                        ActivityLog.department_id == department_id,
-                        ActivityLog.activity_type.in_([
-                            ActivityType.REVIEW_ASSIGNED,
-                            ActivityType.REVIEW_COMPLETED,
-                            ActivityType.DOCUMENT_APPROVED,
-                            ActivityType.DOCUMENT_REJECTED
-                        ])
-                    )
-                )        
-        elif role == "staff":
-            # Staff sees department activities
-            if department_id:
-                query = query.filter(ActivityLog.department_id == department_id)
-        else:  # student
-            # Student sees their own activities and public activities
-            if user_id:
-                query = query.filter(
-                    or_(
-                        ActivityLog.user_id == user_id,
-                        ActivityLog.is_public == '1'
-                    )
-                )
-        
-        # Get recent activities
-        activities = query.order_by(desc(ActivityLog.timestamp)).limit(limit).all()
-        
-        result = []
-        for activity in activities:
-            result.append({
-                "id": activity.id,
-                "type": activity.activity_type.value,
-                "title": activity.title,
-                "description": activity.description,
-                "timestamp": activity.timestamp.isoformat(),
-                "user_name": activity.user.name if activity.user else "System",
-                "document_title": activity.document.title if activity.document else None,
-                "level": activity.activity_level.value,
-                "category": activity.category
-            })
-        
-        return result
+        # Return empty activity data since ActivityLog is disabled
+        return []
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get recent activity: {str(e)}")

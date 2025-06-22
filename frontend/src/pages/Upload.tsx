@@ -20,6 +20,13 @@ interface DocumentMetadata {
   department: string
   category: string
   course_code: string
+  
+  // New metadata fields
+  keywords: string
+  publication_year: number
+  authors: string
+  abstract: string
+  subject_area: string
 }
 
 const Upload: React.FC = () => {
@@ -33,7 +40,14 @@ const Upload: React.FC = () => {
     tags: [],
     department: user?.department_name || '',
     category: 'research',
-    course_code: ''
+    course_code: '',
+    
+    // New metadata fields
+    keywords: '',
+    publication_year: new Date().getFullYear(),
+    authors: user?.full_name || '',
+    abstract: '',
+    subject_area: ''
   })
 
   const maxFileSize = 50 * 1024 * 1024 // 50MB
@@ -219,7 +233,12 @@ const Upload: React.FC = () => {
           tags: [],
           department: user?.department_name || '',
           category: 'research',
-          course_code: ''
+          course_code: '',
+          keywords: '',
+          publication_year: new Date().getFullYear(),
+          authors: user?.full_name || '',
+          abstract: '',
+          subject_area: ''
         })
       }, 2000)
     } catch (error: any) {

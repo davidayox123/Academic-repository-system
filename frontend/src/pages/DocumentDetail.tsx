@@ -64,7 +64,7 @@ const DocumentDetail: React.FC = () => {
         status: apiDoc.status,
         upload_date: apiDoc.upload_date,
         file_size: apiDoc.file_size,
-        uploader_name: apiDoc.author?.name || 'Unknown',
+        uploader_name: apiDoc.author?.full_name || 'Unknown',
         department_name: apiDoc.department || 'Unknown',
         download_count: apiDoc.download_count || 0,
         view_count: 0 // Mock view count since not in API

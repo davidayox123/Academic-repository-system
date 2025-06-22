@@ -5,7 +5,8 @@ from ..models import UserRole, DocumentStatus, ReviewDecision
 
 # Import all schemas
 from .document import DocumentBase, DocumentCreate, DocumentUpdate, DocumentResponse, DocumentListResponse
-from .user import UserBase, UserCreate, UserUpdate, UserResponse, UserProfile, MockUser, UserRole as UserRoleSchema, UserStatus
+from .user import UserBase, UserCreate, UserUpdate, UserResponse, UserProfile, MockUser, UserRole as UserRoleSchema
+from .metadata import MetadataBase, MetadataCreate, MetadataUpdate, MetadataResponse, ProcessedMetadata
 
 # Base schemas
 class BaseResponse(BaseModel):

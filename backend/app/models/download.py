@@ -9,11 +9,11 @@ from ..core.database import Base
 class Download(Base):
     __tablename__ = "downloads"
 
-    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()), name="download_id")
     
     # Foreign Keys
-    document_id = Column(CHAR(36), ForeignKey("documents.id"), nullable=False, index=True)
-    user_id = Column(CHAR(36), ForeignKey("users.id"), nullable=False, index=True)
+    document_id = Column(CHAR(36), ForeignKey("documents.document_id"), nullable=False, index=True)
+    user_id = Column(CHAR(36), ForeignKey("users.user_id"), nullable=False, index=True)
     
     # Download details
     download_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)

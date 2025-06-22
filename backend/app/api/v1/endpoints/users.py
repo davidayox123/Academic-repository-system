@@ -21,27 +21,28 @@ async def get_users(
     """Get all users with filtering and pagination"""
     
     query = db.query(User).join(Department, User.department_id == Department.id, isouter=True)
-    
-    # Apply filters
+      # Apply filters
     if role:
         query = query.filter(User.role == role)
     if department:
         query = query.filter(Department.name.contains(department))
     if search:
         query = query.filter(
-            (User.name.contains(search)) | 
+            (User.first_name.contains(search)) | 
+            (User.last_name.contains(search)) |
             (User.email.contains(search))
         )
     
     total = query.count()
     users = query.offset(skip).limit(limit).all()
-    
-    # Format response
+      # Format response
     user_list = []
     for user in users:
         user_list.append({
             "id": user.id,
-            "name": user.name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "full_name": user.full_name,
             "email": user.email,
             "role": user.role.value,
             "department_name": user.department.name if user.department else "Unknown",
@@ -68,10 +69,23 @@ async def get_user(
     
     return {
         "id": user.id,
-        "name": user.name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": user.full_name,
         "email": user.email,
         "role": user.role.value,
         "department_name": user.department.name if user.department else "Unknown",
+        "phone": user.phone,
+        "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
+        "address": user.address,
+        # Include role-specific fields
+        "student_id": user.student_id if user.role.value == "student" else None,
+        "year_of_study": user.year_of_study if user.role.value == "student" else None,
+        "gpa": user.gpa if user.role.value == "student" else None,
+        "employee_id": user.employee_id if user.role.value in ["staff", "supervisor"] else None,
+        "position": user.position if user.role.value in ["staff", "supervisor"] else None,
+        "title": user.title if user.role.value == "supervisor" else None,
+        "specialization": user.specialization if user.role.value == "supervisor" else None,
         "is_active": user.is_active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None

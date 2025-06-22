@@ -15,7 +15,6 @@ import { useDashboardStore, startDashboardAutoRefresh, stopDashboardAutoRefresh 
 import { Link } from 'react-router-dom'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { formatDistanceToNow } from 'date-fns'
-import toast from 'react-hot-toast'
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore()
@@ -157,7 +156,7 @@ const Dashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between">            <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {user?.name}!
+                Welcome back, {user?.email || 'User'}!
               </h1>
               <p className="text-gray-600">
                 Here's what's happening with your documents today.

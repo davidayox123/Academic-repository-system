@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import auth, dashboard, documents, search, notifications, analytics, users
+from .endpoints import auth, dashboard, documents, search, notifications, analytics, users, metadata
 
 api_router = APIRouter()
 
@@ -7,6 +7,7 @@ api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(documents.router, prefix="/documents", tags=["Documents"])
+api_router.include_router(metadata.router, prefix="/metadata", tags=["Metadata"])
 api_router.include_router(search.router, prefix="/search", tags=["Search"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
