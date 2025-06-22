@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from ....core.database import get_db
 from ....models import (
     User, Document, Department, Review, Download, 
-    ActivityLog, DocumentStatus, ActivityType
+    DocumentStatus
 )
 
 router = APIRouter()

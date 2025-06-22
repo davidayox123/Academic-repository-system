@@ -6,15 +6,12 @@ import type {
   Review,
   LoginCredentials,
   RegisterData,
-  DocumentFilter,
-  ReviewSubmission,
   ApiResponse,
   PaginatedResponse,
   DashboardStats,
-  ActivityItem,
-  AuditLog,
   DocumentStats,
   UserStats,
+  AuditLog,
 } from '../types'
 
 // API Configuration
@@ -96,62 +93,33 @@ export const authApi = {
 
 // Documents API
 export const documentsApi = {
-  getDocuments: (filters?: DocumentFilter & { role?: string }): Promise<AxiosResponse<PaginatedResponse<Document>>> => {
+  getDocuments: (filters?: Record<string, any>): Promise<AxiosResponse<PaginatedResponse<Document>>> => {
     return api.get('/documents', { params: filters })
   },
-
-  getDocument: (id: string, role?: string): Promise<AxiosResponse<ApiResponse<Document>>> => {
-    const params = role ? { role } : {}
-    return api.get(`/documents/${id}`, { params })
+  getDocument: (id: string): Promise<AxiosResponse<ApiResponse<Document>>> => {
+    return api.get(`/documents/${id}`)
   },
   uploadDocument: (data: FormData, onUploadProgress?: (progressEvent: any) => void): Promise<AxiosResponse<Document>> => {
     return api.post('/documents/upload', data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      timeout: 120000, // 2 minutes for file uploads
-      onUploadProgress,
-    })
-  },
-
-  uploadDocumentsBatch: (data: FormData, onUploadProgress?: (progressEvent: any) => void): Promise<AxiosResponse<Document[]>> => {
-    return api.post('/documents/upload-batch', data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
       onUploadProgress,
     })
   },
   updateDocument: (id: string, data: FormData): Promise<AxiosResponse<Document>> => {
     return api.put(`/documents/${id}`, data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
-
   deleteDocument: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
     return api.delete(`/documents/${id}`)
   },
   downloadDocument: (id: string, userId?: string): Promise<AxiosResponse<Blob>> => {
     const params = userId ? { user_id: userId } : {}
-    return api.get(`/documents/${id}/download`, {
-      responseType: 'blob',
-      params
-    })
+    return api.get(`/documents/${id}/download`, { responseType: 'blob', params })
   },
-  getDocumentStats: (role?: string): Promise<AxiosResponse<ApiResponse<DocumentStats>>> => {
-    const params = role ? { role } : {}
-    return api.get('/documents/stats', { params })
-  },
-
-  reviewDocument: (id: string, action: 'approve' | 'reject', comments?: string, reviewerId?: string): Promise<AxiosResponse<{ message: string }>> => {
-    const formData = new FormData()
-    formData.append('action', action)
-    if (comments) formData.append('comments', comments)
-    if (reviewerId) formData.append('reviewer_id', reviewerId)
-    
-    return api.post(`/documents/${id}/review`, formData)
+  getDocumentStats: (): Promise<AxiosResponse<ApiResponse<DocumentStats>>> => {
+    return api.get('/documents/stats')
   },
 }
 
@@ -161,15 +129,12 @@ export const reviewsApi = {
     const params = documentId ? { document_id: documentId } : {}
     return api.get('/reviews', { params })
   },
-
-  submitReview: (data: ReviewSubmission): Promise<AxiosResponse<ApiResponse<Review>>> => {
+  submitReview: (data: Record<string, any>): Promise<AxiosResponse<ApiResponse<Review>>> => {
     return api.post('/reviews', data)
   },
-
   updateReview: (id: string, data: Partial<Review>): Promise<AxiosResponse<ApiResponse<Review>>> => {
     return api.put(`/reviews/${id}`, data)
   },
-
   deleteReview: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
     return api.delete(`/reviews/${id}`)
   },
@@ -218,16 +183,6 @@ export const dashboardApi = {
   getRecentDocuments: (limit: number = 10, role?: string): Promise<AxiosResponse<Document[]>> => {
     const params = { limit, ...(role && { role }) }
     return api.get('/dashboard/recent-documents', { params })
-  },
-
-  getActivity: (limit: number = 20, role?: string): Promise<AxiosResponse<ActivityItem[]>> => {
-    const params = { limit, ...(role && { role }) }
-    return api.get('/dashboard/activity', { params })
-  },
-
-  getAnalytics: (role?: string, timeframe?: string): Promise<AxiosResponse<any>> => {
-    const params = { ...(role && { role }), ...(timeframe && { timeframe }) }
-    return api.get('/dashboard/analytics', { params })
   },
 }
 
@@ -345,81 +300,6 @@ export const adminApi = {
   }>>> => {
     return api.get('/users/departments/list')
   },
-
-  // Analytics
-  getAnalyticsOverview: (): Promise<AxiosResponse<{
-    overview: {
-      total_users: number
-      total_documents: number
-      total_departments: number
-      total_downloads: number
-    }
-    document_status: {
-      approved: number
-      pending: number
-      under_review: number
-      rejected: number
-    }
-    recent_activity: {
-      new_users_30d: number
-      new_documents_30d: number
-    }
-  }>> => {
-    return api.get('/analytics/overview')
-  },
-
-  getDocumentsByDepartment: (): Promise<AxiosResponse<Array<{
-    department: string
-    document_count: number
-  }>>> => {
-    return api.get('/analytics/documents/by-department')
-  },
-
-  getDocumentsByCategory: (): Promise<AxiosResponse<Array<{
-    category: string
-    document_count: number
-  }>>> => {
-    return api.get('/analytics/documents/by-category')
-  },
-
-  getDocumentsByMonth: (months: number = 12): Promise<AxiosResponse<Array<{
-    year: number
-    month: number
-    document_count: number
-    month_name: string
-  }>>> => {
-    return api.get('/analytics/documents/by-month', { params: { months } })
-  },
-
-  getUsersByRole: (): Promise<AxiosResponse<Array<{
-    role: string
-    user_count: number
-  }>>> => {
-    return api.get('/analytics/users/by-role')
-  },
-
-  getTopDepartments: (limit: number = 10): Promise<AxiosResponse<Array<{
-    department: string
-    user_count: number
-    document_count: number
-  }>>> => {
-    return api.get('/analytics/top-departments', { params: { limit } })
-  },
-
-  getDownloadStats: (): Promise<AxiosResponse<{
-    most_downloaded: Array<{
-      title: string
-      download_count: number
-      uploader: string
-      department: string
-    }>
-    by_category: Array<{
-      category: string
-      total_downloads: number
-    }>
-  }>> => {
-    return api.get('/analytics/download-stats')
-  }
 }
 
 // Utility functions

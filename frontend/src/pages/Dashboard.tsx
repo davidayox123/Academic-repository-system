@@ -2,7 +2,6 @@ import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   FileText, 
-  Upload, 
   Download, 
   CheckCircle,
   Clock,
@@ -21,7 +20,6 @@ const Dashboard: React.FC = () => {
   const { 
     stats, 
     recentDocuments, 
-    recentActivity, 
     isLoading, 
     error, 
     lastUpdated,
@@ -264,41 +262,6 @@ const Dashboard: React.FC = () => {
                   <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(doc.status)}`}>
                     {formatStatus(doc.status)}
                   </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="glass p-6 rounded-2xl"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Recent Activity</h3>
-              <button className="text-blue-600 hover:text-blue-500 text-sm font-medium">
-                View All
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    {activity.type === 'upload' && <Upload className="w-4 h-4 text-blue-600" />}
-                    {activity.type === 'review' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                    {activity.type === 'download' && <Download className="w-4 h-4 text-purple-600" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-gray-900 text-sm">
-                      {activity.message}
-                    </p>
-                    <p className="text-gray-500 text-xs mt-1">
-                      {activity.timestamp}
-                    </p>
-                  </div>
                 </div>
               ))}
             </div>

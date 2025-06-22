@@ -26,8 +26,8 @@ class AuditLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    user = relationship("User", back_populates="audit_logs")
-    document = relationship("Document", back_populates="audit_logs")
+    user = relationship("User")
+    document = relationship("Document")
 
     def __repr__(self):
         return f"<AuditLog(id={self.id}, action={self.action}, user_id={self.user_id})>"

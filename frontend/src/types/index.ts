@@ -1,124 +1,192 @@
 // User Types
 export interface User {
-  id: string
+  id: string // UUID, maps to user_id in backend
+  email: string
   first_name: string
   last_name: string
-  full_name: string
-  email: string
   role: UserRole
   department_id: string
-  department_name?: string
   avatar?: string
   phone?: string
   date_of_birth?: string
   address?: string
-  
-  // Student-specific fields
   student_id?: string
   year_of_study?: number
   gpa?: string
   enrollment_date?: string
   graduation_date?: string
-  
-  // Staff-specific fields
   employee_id?: string
   position?: string
   hire_date?: string
   office_location?: string
-  
-  // Supervisor-specific fields
+  salary?: string
   title?: string
   specialization?: string
   research_interests?: string
   qualifications?: string
   years_of_experience?: number
-  
   is_active: boolean
   created_at: string
   updated_at: string
-}
-
-export interface UserProfile {
-  id: string
-  user_id: string
-  bio?: string
-  phone?: string
-  address?: string
-  avatar_url?: string
-  social_links?: Record<string, string>
-  created_at: string
-  updated_at: string
+  department?: Department
+  uploaded_documents?: Document[]
+  supervised_documents?: Document[]
+  reviews?: Review[]
+  audit_logs?: AuditLog[]
+  downloads?: Download[]
 }
 
 export type UserRole = 'student' | 'staff' | 'supervisor' | 'admin'
 
-// Document Types
+export interface Department {
+  id: string // department_id
+  name: string // department_name
+  code: string
+  faculty: string
+  description?: string
+  head_of_department?: string
+  contact_email?: string
+  contact_phone?: string
+  building?: string
+  room_number?: string
+  is_active: string
+  created_at: string
+  updated_at: string
+  total_users: number
+  total_documents: number
+  users?: User[]
+  documents?: Document[]
+}
+
 export interface Document {
-  id: string
+  id: string // document_id
   title: string
-  description: string
+  description?: string
+  filename: string
+  original_filename: string
   file_path: string
-  file_name: string
   file_size: number
   file_type: string
+  file_extension: string
+  mime_type: string
+  category: DocumentCategory
+  document_type: DocumentType
+  tags?: string[]
+  keywords?: string
+  abstract?: string
+  language?: string
+  course_code?: string
+  academic_year?: string
+  semester?: string
   status: DocumentStatus
-  upload_date: string
-  author_id: string
-  author: User
-  department: string
-  tags: string[]
-  version: number
   is_public: boolean
+  is_featured: boolean
+  uploader_id: string
+  department_id: string
+  supervisor_id?: string
+  approval_date?: string
+  rejection_reason?: string
+  reviewer_comments?: string
+  is_processed: boolean
+  thumbnail_path?: string
+  preview_path?: string
+  text_content?: string
   download_count: number
-  reviews: Review[]
+  view_count: number
+  like_count: number
+  share_count: number
+  version: string
+  parent_document_id?: string
+  access_level: string
+  download_allowed: boolean
+  upload_date: string
+  last_accessed?: string
   created_at: string
   updated_at: string
+  uploader?: User
+  supervisor?: User
+  department?: Department
+  parent_document?: Document
+  reviews?: Review[]
+  downloads?: Download[]
+  document_metadata?: Metadata
+  audit_logs?: AuditLog[]
 }
 
-export type DocumentStatus = 'pending' | 'under_review' | 'approved' | 'rejected'
+export type DocumentStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'archived'
+export type DocumentCategory = 'research' | 'thesis' | 'assignment' | 'presentation' | 'paper' | 'report' | 'project' | 'other'
+export type DocumentType = 'pdf' | 'doc' | 'docx' | 'ppt' | 'pptx' | 'txt' | 'image' | 'video' | 'audio' | 'archive'
 
-export interface DocumentUpload {
-  title: string
-  description: string
-  file: File
-  department: string
-  tags: string[]
-  is_public: boolean
-}
-
-export interface DocumentFilter {
-  search?: string
-  status?: DocumentStatus
-  department?: string
-  author_id?: string
-  tags?: string[]
-  date_from?: string
-  date_to?: string
-  page?: number
-  limit?: number
-}
-
-// Review Types
 export interface Review {
-  id: string
+  id: string // review_id
   document_id: string
   reviewer_id: string
-  reviewer: User
   status: ReviewStatus
-  comments: string
-  rating?: number
-  reviewed_at: string
+  decision?: ReviewDecision
+  comments?: string
+  feedback?: string
+  suggestions?: string
+  rating_quality?: number
+  rating_relevance?: number
+  rating_originality?: number
+  overall_rating?: number
+  assigned_date: string
+  started_date?: string
+  completed_date?: string
+  priority?: string
+  estimated_hours?: number
+  actual_hours?: number
   created_at: string
   updated_at: string
+  document?: Document
+  reviewer?: User
 }
 
-export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'needs_revision'
+export type ReviewStatus = 'pending' | 'in_progress' | 'completed'
+export type ReviewDecision = 'approved' | 'rejected' | 'needs_revision'
 
-export interface ReviewSubmission {
+export interface Metadata {
+  id: string // metadata_id
   document_id: string
-  status: ReviewStatus
-  comments: string
-  rating?: number
+  keywords: string
+  publication_year: number
+  authors: string
+  abstract?: string
+  subject_area?: string
+  created_at: string
+  updated_at: string
+  document?: Document
+}
+
+export interface AuditLog {
+  id: string // log_id
+  user_id: string
+  document_id?: string
+  action: string
+  details?: string
+  ip_address?: string
+  user_agent?: string
+  timestamp: string
+  created_at: string
+  user?: User
+  document?: Document
+}
+
+export interface Download {
+  id: string // download_id
+  document_id: string
+  user_id: string
+  download_date: string
+  ip_address?: string
+  user_agent?: string
+  file_size_at_download?: number
+  is_successful: string
+  error_message?: string
+  referrer?: string
+  download_source?: string
+  created_at: string
+  document?: Document
+  user?: User
 }
 
 // Auth Types
@@ -234,7 +302,7 @@ export interface SearchResult {
   users: User[]
   total_results: number
   query: string
-  filters_applied: DocumentFilter
+  filters_applied: Record<string, any>
 }
 
 export interface SearchSuggestion {
@@ -262,20 +330,6 @@ export type NotificationType =
   | 'document_approved'
   | 'document_rejected'
   | 'system_announcement'
-
-// Audit Types
-export interface AuditLog {
-  id: string
-  user_id: string
-  user: User
-  action: string
-  resource_type: string
-  resource_id: string
-  details: Record<string, any>
-  ip_address: string
-  user_agent: string
-  timestamp: string
-}
 
 // File Upload Types
 export interface FileUploadProps {

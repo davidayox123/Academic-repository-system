@@ -11,18 +11,14 @@ import {
   UserPlus,
   Building,
   Search,
-  Eye,
-  MoreHorizontal,
-  AlertCircle,
-  CheckCircle,
-  Clock
+  MoreHorizontal
 } from 'lucide-react'
 import { adminApi, handleApiError } from '../services/api'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 
-interface UserStatsData {
+declare interface UserStatsData {
   total_users: number
   active_users: number
   by_role: {
@@ -31,43 +27,24 @@ interface UserStatsData {
     supervisors: number
     admins: number
   }
-  departments_count: number
-}
-
-interface AnalyticsData {
-  overview: {
-    total_users: number
-    total_documents: number
-    total_departments: number
-    total_downloads: number
-  }
-  document_status: {
-    approved: number
-    pending: number
-    under_review: number
-    rejected: number
-  }
-  recent_activity: {
-    new_users_30d: number
-    new_documents_30d: number
-  }
 }
 
 interface UserData {
   id: string
-  name: string
+  first_name: string
+  last_name: string
   email: string
   role: string
-  department_name: string
+  department_id: string
   is_active: boolean
   created_at: string
+  updated_at?: string
 }
 
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'analytics' | 'settings'>('dashboard')
   const [isLoading, setIsLoading] = useState(true)
   const [userStats, setUserStats] = useState<UserStatsData | null>(null)
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [users, setUsers] = useState<UserData[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [userSearch, setUserSearch] = useState('')
@@ -86,13 +63,11 @@ const Admin: React.FC = () => {
   const fetchInitialData = async () => {
     try {
       setIsLoading(true)
-      const [userStatsRes, analyticsRes] = await Promise.all([
-        adminApi.getUserStats(),
-        adminApi.getAnalyticsOverview()
+      const [userStatsRes] = await Promise.all([
+        adminApi.getUserStats()
       ])
       
       setUserStats(userStatsRes.data)
-      setAnalytics(analyticsRes.data)
     } catch (err: any) {
       const errorMessage = handleApiError(err)
       toast.error(errorMessage)
@@ -110,7 +85,24 @@ const Admin: React.FC = () => {
         limit: 50
       }
       const response = await adminApi.getUsers(filters)
-      setUsers(response.data.items)
+      setUsers(
+        response.data.items.map((user: any) => {
+          // Split name into first_name and last_name (fallback if only one name)
+          const [first_name, ...rest] = (user.name || '').split(' ')
+          const last_name = rest.join(' ') || ''
+          return {
+            id: user.id,
+            first_name: first_name || '',
+            last_name: last_name,
+            email: user.email,
+            role: user.role,
+            department_id: user.department_name || '',
+            is_active: user.is_active,
+            created_at: user.created_at,
+            updated_at: user.updated_at
+          }
+        })
+      )
     } catch (err: any) {
       const errorMessage = handleApiError(err)
       toast.error(errorMessage)
@@ -133,28 +125,28 @@ const Admin: React.FC = () => {
         {[
           {
             title: 'Total Users',
-            value: analytics?.overview?.total_users || 0,
-            change: userStats?.by_role ? '+' + (analytics?.recent_activity?.new_users_30d || 0) + ' this month' : '',
+            value: userStats?.total_users || 0,
+            change: '',
             icon: Users,
             color: 'blue'
           },
           {
             title: 'Total Documents',
-            value: analytics?.overview?.total_documents || 0,
-            change: '+' + (analytics?.recent_activity?.new_documents_30d || 0) + ' this month',
+            value: 0,
+            change: '',
             icon: FileText,
             color: 'green'
           },
           {
             title: 'Departments',
-            value: analytics?.overview?.total_departments || 0,
+            value: 0,
             change: 'Active',
             icon: Building,
             color: 'purple'
           },
           {
             title: 'Total Downloads',
-            value: analytics?.overview?.total_downloads || 0,
+            value: 0,
             change: 'All time',
             icon: Download,
             color: 'orange'
@@ -179,58 +171,6 @@ const Admin: React.FC = () => {
             <div className="text-xs text-green-600 mt-2">{stat.change}</div>
           </motion.div>
         ))}
-      </div>
-
-      {/* Document Status Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="glass p-6 rounded-2xl"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            Document Status Overview
-          </h3>
-          <div className="space-y-4">
-            {[
-              { status: 'Approved', count: analytics?.document_status?.approved || 0, color: 'green', icon: CheckCircle },
-              { status: 'Pending', count: analytics?.document_status?.pending || 0, color: 'yellow', icon: Clock },
-              { status: 'Under Review', count: analytics?.document_status?.under_review || 0, color: 'blue', icon: Eye },
-              { status: 'Rejected', count: analytics?.document_status?.rejected || 0, color: 'red', icon: AlertCircle }
-            ].map((item) => (
-              <div key={item.status} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <item.icon className={`w-5 h-5 text-${item.color}-500`} />
-                  <span className="text-gray-900 dark:text-white">{item.status}</span>
-                </div>
-                <span className="font-semibold text-gray-900 dark:text-white">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="glass p-6 rounded-2xl"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            Users by Role
-          </h3>
-          <div className="space-y-4">
-            {[
-              { role: 'Students', count: userStats?.by_role?.students || 0, color: 'blue' },
-              { role: 'Staff', count: userStats?.by_role?.staff || 0, color: 'green' },
-              { role: 'Supervisors', count: userStats?.by_role?.supervisors || 0, color: 'purple' },
-              { role: 'Admins', count: userStats?.by_role?.admins || 0, color: 'red' }
-            ].map((item) => (
-              <div key={item.role} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <span className="text-gray-900 dark:text-white">{item.role}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </div>
   )
@@ -309,7 +249,7 @@ const Admin: React.FC = () => {
                   <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user.name}
+                          {user.first_name} {user.last_name}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           {user.email}
@@ -327,7 +267,7 @@ const Admin: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {user.department_name}
+                      {user.department_id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

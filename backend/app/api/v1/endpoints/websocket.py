@@ -11,7 +11,6 @@ import uuid
 from app.core.database import get_db
 from app.models.user import User, UserRole
 from app.models.document import Document
-from app.models.activity_log import ActivityLog, ActivityType
 
 router = APIRouter()
 

@@ -14,7 +14,6 @@ import {
   MessageCircle,
   AlertCircle
 } from 'lucide-react'
-import { useAuthStore } from '../stores/useAuthStore'
 import { documentsApi, handleApiError } from '../services/api'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
@@ -38,7 +37,6 @@ interface DocumentDetails {
 const DocumentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuthStore()
   const [doc, setDoc] = useState<DocumentDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -53,21 +51,23 @@ const DocumentDetail: React.FC = () => {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await documentsApi.getDocument(id!, user?.role)      // Map API response to our interface
+      const response = await documentsApi.getDocument(id!) // Remove user?.role argument
       const apiDoc = response.data.data
       setDoc({
         id: apiDoc.id,
         title: apiDoc.title,
         description: apiDoc.description || '',
-        filename: apiDoc.file_name || 'document.pdf',
-        category: 'general', // Mock category since not in API
+        filename: apiDoc.filename || 'document.pdf',
+        category: apiDoc.category || 'general',
         status: apiDoc.status,
         upload_date: apiDoc.upload_date,
         file_size: apiDoc.file_size,
-        uploader_name: apiDoc.author?.full_name || 'Unknown',
-        department_name: apiDoc.department || 'Unknown',
+        uploader_name: apiDoc.uploader?.first_name ? `${apiDoc.uploader.first_name} ${apiDoc.uploader.last_name}` : 'Unknown',
+        department_name: typeof apiDoc.department === 'string'
+          ? apiDoc.department
+          : apiDoc.department?.name || 'Unknown',
         download_count: apiDoc.download_count || 0,
-        view_count: 0 // Mock view count since not in API
+        view_count: apiDoc.view_count || 0
       })
     } catch (err: any) {
       const errorMessage = handleApiError(err)

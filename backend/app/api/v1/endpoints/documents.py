@@ -20,10 +20,9 @@ from app.core.database import get_db
 from app.models.user import User, UserRole
 from app.models.document import Document, DocumentStatus, DocumentCategory, DocumentType
 from app.models.department import Department
-from app.models.activity_log import ActivityLog, ActivityType, ActivityLevel
 from app.models.download import Download
 from app.schemas.document import DocumentCreate, DocumentResponse, DocumentUpdate, DocumentFilter
-from .websocket import notify_document_uploaded, notify_activity_update
+from .websocket import notify_document_uploaded
 from app.core.auth import get_current_user
 
 router = APIRouter()
@@ -141,54 +140,6 @@ async def extract_text_content(file_path: Path) -> Optional[str]:
         print(f"Error extracting text: {e}")
         
     return None
-
-async def log_activity(
-    db: Session,
-    activity_type: ActivityType,
-    title: str,
-    description: str,
-    user_id: str,
-    document_id: Optional[str] = None,
-    department_id: Optional[str] = None,
-    request: Optional[Request] = None
-):
-    """Log activity for real-time updates"""
-    try:
-        ip_address = None
-        user_agent = None
-        
-        if request:
-            ip_address = request.client.host if request.client else None
-            user_agent = request.headers.get("user-agent")
-        
-        activity = ActivityLog(
-            activity_type=activity_type,
-            title=title,
-            description=description,
-            user_id=user_id,
-            document_id=document_id,
-            department_id=department_id,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            category="academic",
-            is_public='1' if activity_type in [ActivityType.DOCUMENT_UPLOADED, ActivityType.DOCUMENT_APPROVED] else '0'
-        )
-        
-        db.add(activity)
-        await db.commit()
-        
-        # Notify WebSocket clients
-        await notify_activity_update({
-            "type": activity_type.value,
-            "title": title,
-            "description": description,
-            "timestamp": activity.timestamp.isoformat(),
-            "user_id": user_id,
-            "document_id": document_id
-        })
-        
-    except Exception as e:
-        print(f"Error logging activity: {e}")
 
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
@@ -374,18 +325,6 @@ async def upload_document(
         
         # Update document with processed data
         await db.commit()
-        
-        # Log activity
-        await log_activity(
-            db=db,
-            activity_type=ActivityType.DOCUMENT_UPLOADED,
-            title=f"Document uploaded: {title}",
-            description=f"New document '{title}' has been uploaded",
-            user_id="mock-user-id",
-            document_id=document_id,
-            department_id=department_id,
-            request=request
-        )
         
         # Notify WebSocket clients
         await notify_document_uploaded("mock-user-id", {
@@ -659,17 +598,6 @@ async def get_document(
     document.last_accessed = datetime.now()
     await db.commit()
     
-    # Log view activity
-    await log_activity(
-        db=db,
-        activity_type=ActivityType.DOCUMENT_VIEWED,
-        title=f"Document viewed: {document.title}",
-        description=f"Document '{document.title}' was viewed",
-        user_id="mock-user-id",
-        document_id=document_id,
-        department_id=document.department_id
-    )
-    
     return DocumentResponse(
         id=document.id,
         title=document.title,
@@ -736,18 +664,6 @@ async def download_document(
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
     await db.commit()
     
-    # Log download activity
-    await log_activity(
-        db=db,
-        activity_type=ActivityType.DOCUMENT_DOWNLOADED,
-        title=f"Document downloaded: {document.title}",
-        description=f"Document '{document.title}' was downloaded",
-        user_id="mock-user-id",
-        document_id=document_id,
-        department_id=document.department_id,
-        request=request
-    )
-    
     return FileResponse(
         path=file_path,
         filename=document.original_filename,
@@ -792,17 +708,6 @@ async def update_document(
     document.updated_at = datetime.now()
     await db.commit()
     
-    # Log activity
-    await log_activity(
-        db=db,
-        activity_type=ActivityType.DOCUMENT_UPDATED,
-        title=f"Document updated: {document.title}",
-        description=f"Document '{document.title}' metadata was updated",
-        user_id="mock-user-id",
-        document_id=document_id,
-        department_id=document.department_id
-    )
-    
     return DocumentResponse(
         id=document.id,
         title=document.title,
@@ -842,17 +747,6 @@ async def delete_document(
         thumbnail_path = Path(document.thumbnail_path)
         if thumbnail_path.exists():
             thumbnail_path.unlink()
-    
-    # Log activity before deletion
-    await log_activity(
-        db=db,
-        activity_type=ActivityType.DOCUMENT_DELETED,
-        title=f"Document deleted: {document.title}",
-        description=f"Document '{document.title}' was deleted",
-        user_id="mock-user-id",
-        document_id=document_id,
-        department_id=document.department_id
-    )
     
     # Delete from database
     db.delete(document)
@@ -904,19 +798,6 @@ async def review_document(
     document.approval_date = datetime.utcnow() if action == "approve" else None
     document.rejection_reason = comments if action == "reject" else None
     document.updated_at = datetime.utcnow()
-      # Log the review activity
-    try:
-        activity = ActivityLog(
-            user_id=reviewer_id,
-            activity_type=ActivityType.DOCUMENT_REVIEWED,
-            activity_level=ActivityLevel.MEDIUM,
-            message=f"Document '{document.title}' {action}d by {reviewer.name}",
-            metadata_json={"document_id": document_id, "action": action, "comments": comments}
-        )
-        db.add(activity)
-    except Exception as e:
-        logging.error(f"Error logging review activity: {e}")
-    
     db.commit()
     
     # Send WebSocket notification

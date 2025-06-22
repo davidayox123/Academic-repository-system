@@ -224,7 +224,6 @@ async def get_recent_activity(
 ):
     """
     Get recent activity feed based on user role
-    Note: ActivityLog feature is disabled - returning empty data
     """
     try:
         # Return empty activity data since ActivityLog is disabled

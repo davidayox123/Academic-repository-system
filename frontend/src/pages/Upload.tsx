@@ -13,15 +13,14 @@ interface UploadFile extends File {
   error?: string
 }
 
+// Update DocumentMetadata to match backend Metadata type
 interface DocumentMetadata {
   title: string
   description: string
   tags: string[]
-  department: string
+  department_id: string
   category: string
   course_code: string
-  
-  // New metadata fields
   keywords: string
   publication_year: number
   authors: string
@@ -38,14 +37,12 @@ const Upload: React.FC = () => {
     title: '',
     description: '',
     tags: [],
-    department: user?.department_name || '',
+    department_id: user?.department_id || '',
     category: 'research',
     course_code: '',
-    
-    // New metadata fields
     keywords: '',
     publication_year: new Date().getFullYear(),
-    authors: user?.full_name || '',
+    authors: user ? `${user.first_name} ${user.last_name}` : '',
     abstract: '',
     subject_area: ''
   })
@@ -231,12 +228,12 @@ const Upload: React.FC = () => {
           title: '',
           description: '',
           tags: [],
-          department: user?.department_name || '',
+          department_id: user?.department_id || '',
           category: 'research',
           course_code: '',
           keywords: '',
           publication_year: new Date().getFullYear(),
-          authors: user?.full_name || '',
+          authors: user ? `${user.first_name} ${user.last_name}` : '',
           abstract: '',
           subject_area: ''
         })

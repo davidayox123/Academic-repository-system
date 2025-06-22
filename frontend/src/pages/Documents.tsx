@@ -23,6 +23,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 
+// Update DocumentItem to match backend Document type
 interface DocumentItem {
   id: string
   title: string
@@ -31,8 +32,10 @@ interface DocumentItem {
   status: string
   upload_date: string
   file_size: number
-  uploader_name: string
-  department_name: string
+  uploader_id: string
+  uploader?: string
+  department_id: string
+  department?: string
   download_count: number
   view_count: number
 }
@@ -68,31 +71,27 @@ const Documents: React.FC = () => {
     try {
       setIsLoading(true)
       setError(null)
-      
       const filters = {
-        role: user?.role,
         user_id: user?.id,
         search: searchQuery || undefined,
-        status: (statusFilter as any) || undefined,
+        status: statusFilter || undefined,
         category: categoryFilter || undefined
       }
-      
       const response = await documentsApi.getDocuments(filters)
-      console.log('Documents API Response:', response.data) // Debug log
-      
-      // Backend returns pagination data directly, not wrapped in ApiResponse
       const mappedDocs = (response.data.items || []).map((doc: any) => ({
         id: doc.id,
         title: doc.title,
-        filename: doc.filename || doc.file_name,
+        filename: doc.filename,
         category: doc.category,
         status: doc.status,
         upload_date: doc.upload_date,
         file_size: doc.file_size,
-        uploader_name: doc.uploader_name || doc.author?.name || 'Unknown',
-        department_name: doc.department_name || doc.department || 'Unknown',
-        download_count: doc.download_count || 0,
-        view_count: doc.view_count || 0
+        uploader_id: doc.uploader_id,
+        uploader: doc.uploader?.first_name + ' ' + doc.uploader?.last_name,
+        department_id: doc.department_id,
+        department: doc.department?.name,
+        download_count: doc.download_count,
+        view_count: doc.view_count
       }))
       setDocuments(mappedDocs)
     } catch (err: any) {
@@ -128,23 +127,9 @@ const Documents: React.FC = () => {
     }
   }
 
-  // Handle review (for supervisors and admins)
-  const handleReview = async (documentId: string, action: 'approve' | 'reject', comments?: string) => {
-    try {
-      if (!user?.id) {
-        toast.error('User not found')
-        return
-      }
-
-      await documentsApi.reviewDocument(documentId, action, comments, user.id)
-      toast.success(`Document ${action}d successfully`)
-      
-      // Refresh documents to show updated status
-      fetchDocuments()
-    } catch (err: any) {
-      const errorMessage = handleApiError(err)
-      toast.error(`Failed to ${action}: ${errorMessage}`)
-    }
+  // TODO: Handle review (for supervisors and admins)
+  const handleReview = async () => {
+    toast('Review functionality is not yet implemented')
   }
 
   // Check if current user can review documents
@@ -413,10 +398,10 @@ const Documents: React.FC = () => {
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <div className="flex items-center space-x-2">
                       <Users className="w-4 h-4" />
-                      <span>{doc.uploader_name}</span>
+                      <span>{doc.uploader}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <span>{doc.department_name}</span>
+                      <span>{doc.department}</span>
                     </div>
                   </div>
 
@@ -486,9 +471,9 @@ const Documents: React.FC = () => {
                           <span className="text-sm text-gray-500">{formatFileSize(doc.file_size)}</span>
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <span>{doc.uploader_name}</span>
+                          <span>{doc.uploader}</span>
                           <span>•</span>
-                          <span>{doc.department_name}</span>
+                          <span>{doc.department}</span>
                           <span>•</span>
                           <span>{formatDistanceToNow(new Date(doc.upload_date), { addSuffix: true })}</span>
                         </div>
@@ -526,14 +511,14 @@ const Documents: React.FC = () => {
                         {canReview && doc.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleReview(doc.id, 'approve')}
+                              onClick={() => handleReview()}
                               className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors flex items-center"
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
                             </button>
                             <button
-                              onClick={() => handleReview(doc.id, 'reject', 'Document does not meet requirements')}
+                              onClick={() => handleReview()}
                               className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors flex items-center"
                             >
                               <AlertCircle className="w-4 h-4 mr-1" />
@@ -628,11 +613,11 @@ const Documents: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Uploader:</span>
-                            <span className="text-gray-900 dark:text-white">{previewDocument.uploader_name}</span>
+                            <span className="text-gray-900 dark:text-white">{previewDocument.uploader}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Department:</span>
-                            <span className="text-gray-900 dark:text-white">{previewDocument.department_name}</span>
+                            <span className="text-gray-900 dark:text-white">{previewDocument.department}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Uploaded:</span>
@@ -673,7 +658,7 @@ const Documents: React.FC = () => {
                           <>
                             <button
                               onClick={() => {
-                                handleReview(previewDocument.id, 'approve')
+                                handleReview()
                                 setPreviewDocument(null)
                               }}
                               className="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded-lg transition-colors flex items-center justify-center"
@@ -683,7 +668,7 @@ const Documents: React.FC = () => {
                             </button>
                             <button
                               onClick={() => {
-                                handleReview(previewDocument.id, 'reject', 'Document does not meet requirements')
+                                handleReview()
                                 setPreviewDocument(null)
                               }}
                               className="bg-red-600 hover:bg-red-700 text-white w-full py-2 rounded-lg transition-colors flex items-center justify-center"
