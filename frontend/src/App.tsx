@@ -76,20 +76,15 @@ function App() {
       </div>
 
       {/* Show header only when authenticated */}
-      {isAuthenticated && <Header />}
-      
+      <Header />
       <main className={`relative z-10 ${isAuthenticated ? 'pt-16' : ''}`}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Home />} />
             
             {/* Protected routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            } />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />

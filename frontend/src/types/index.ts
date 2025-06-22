@@ -1,33 +1,40 @@
 // User Types
 export interface User {
   id: string // UUID, maps to user_id in backend
-  email: string
   first_name: string
+  middle_name?: string
   last_name: string
+  email: string
   role: UserRole
   department_id: string
-  avatar?: string
-  phone?: string
-  date_of_birth?: string
-  address?: string
-  student_id?: string
-  year_of_study?: number
-  gpa?: string
-  enrollment_date?: string
-  graduation_date?: string
-  employee_id?: string
-  position?: string
-  hire_date?: string
-  office_location?: string
-  salary?: string
-  title?: string
-  specialization?: string
-  research_interests?: string
-  qualifications?: string
-  years_of_experience?: number
   is_active: boolean
+  avatar?: string
+
+  // Student attributes
+  matric_no?: string
+  level?: '100' | '200' | '300' | '400' | '500'
+
+  // Staff attributes
+  staff_id?: string
+  position?: string
+  office_no?: string
+
+  // Supervisor attributes
+  title?: string
+  assigned_department?: string
+  specialization_area?: string
+  max_documents?: number
+  years_of_experience?: number
+
+  // Admin attributes
+  admin_id?: string
+  admin_level?: 'super' | 'department' | 'limited'
+  permissions_scope?: string
+
   created_at: string
   updated_at: string
+
+  // Relational properties (optional)
   department?: Department
   uploaded_documents?: Document[]
   supervised_documents?: Document[]

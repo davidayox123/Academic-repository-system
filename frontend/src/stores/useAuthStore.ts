@@ -12,71 +12,69 @@ interface AuthState {
 }
 
 interface AuthActions {
-  selectRole: (role: UserRole) => void
+  selectRole: (role: UserRole, userId: string) => void
   switchRole: (role: UserRole) => void
   logout: () => void
 }
 
-// Real users from database
+// Real users from the database with static UUIDs
 const realUsers: Record<UserRole, User> = {
   student: {
-    id: '7e3cf886-559d-43de-b69c-f3772398f03a',
-    first_name: 'Alex',
-    last_name: 'Thompson',
-    email: 'student1@university.edu',
+    id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+    first_name: 'John',
+    last_name: 'Doe',
+    email: 'john.doe@student.edu',
     role: 'student',
-    department_id: '7e3cf886-559d-43de-b69c-f3772398f03a',
-    student_id: 'CS2021001',
-    year_of_study: 3,
-    gpa: '3.75',
-    avatar: undefined,
+    department_id: '8f9b5b3a-3d1b-4c6a-8a0a-8d7e6f5c4b3a',
+    matric_no: 'CS/19/001',
+    level: '400',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  },  staff: {
-    id: '264f717b-55ae-4982-9973-a89cd50c41f9',
-    first_name: 'Jane',
-    last_name: 'Smith',
-    email: 'staff1@university.edu',
+  },
+  staff: {
+    id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
+    first_name: 'Jennifer',
+    last_name: 'Anderson',
+    email: 'jennifer.anderson@staff.edu',
     role: 'staff',
-    department_id: '264f717b-55ae-4982-9973-a89cd50c41f9',
-    employee_id: 'EMP2020001',
-    position: 'Academic Staff',
-    avatar: undefined,
+    department_id: '8f9b5b3a-3d1b-4c6a-8a0a-8d7e6f5c4b3a',
+    staff_id: 'ST001',
+    position: 'Research Assistant',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   supervisor: {
-    id: '5091d4ee-02cb-4e99-a34b-d98f1bc72811',
-    first_name: 'Dr. Alice',
-    last_name: 'Johnson',
-    email: 'supervisor1@university.edu',
+    id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
+    first_name: 'Dr. Rachel',
+    last_name: 'White',
+    email: 'rachel.white@supervisor.edu',
     role: 'supervisor',
-    department_id: '5091d4ee-02cb-4e99-a34b-d98f1bc72811',
-    title: 'Professor',
-    specialization: 'Machine Learning & AI',
-    years_of_experience: 15,
-    avatar: undefined,
+    department_id: '8f9b5b3a-3d1b-4c6a-8a0a-8d7e6f5c4b3a',
+    specialization_area: 'Artificial Intelligence, Machine Learning',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   admin: {
-    id: '6c513b2d-0188-4133-8796-aa6c7753d2de',
-    first_name: 'System',
+    id: 'd4e5f6a7-b8c9-0123-4567-890abcdef012',
+    first_name: 'Super',
     last_name: 'Administrator',
-    email: 'admin@university.edu',
+    email: 'super.admin@admin.edu',
     role: 'admin',
-    department_id: '6c513b2d-0188-4133-8796-aa6c7753d2de',
-    avatar: undefined,
+    department_id: '8f9b5b3a-3d1b-4c6a-8a0a-8d7e6f5c4b3a',
+    admin_level: 'super',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 }
 
-const createMockUser = (role: UserRole): User => realUsers[role]
+const createMockUser = (role: UserRole, userId: string): User => {
+  const user = realUsers[role];
+  return { ...user, id: userId };
+}
 
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(
@@ -88,8 +86,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       hasSelectedRole: false,
 
       // Actions
-      selectRole: (role: UserRole) => {
-        const user = createMockUser(role)
+      selectRole: (role: UserRole, userId: string) => {
+        const user = createMockUser(role, userId)
         set({
           user,
           currentRole: role,
@@ -99,7 +97,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       },
 
       switchRole: (role: UserRole) => {
-        const user = createMockUser(role)
+        // Find the user ID based on the role from the realUsers object
+        const userId = realUsers[role].id;
+        const user = createMockUser(role, userId)
         set({
           user,
           currentRole: role,

@@ -117,7 +117,7 @@ CREATE TABLE downloads (
 
 -- Insert Departments
 INSERT INTO departments (department_id, department_name, faculty, head_of_department) VALUES
-(UUID(), 'Computer Science', 'Faculty of Science', 'Prof. John Smith'),
+('8f9b5b3a-3d1b-4c6a-8a0a-8d7e6f5c4b3a', 'Computer Science', 'Faculty of Science', 'Prof. John Smith'),
 (UUID(), 'Physics', 'Faculty of Science', 'Dr. Sarah Johnson'),
 (UUID(), 'Mathematics', 'Faculty of Science', 'Prof. Michael Brown'),
 (UUID(), 'Environmental Science', 'Faculty of Environmental Studies', 'Dr. Emily Davis'),
@@ -132,7 +132,7 @@ SET @chem_dept = (SELECT department_id FROM departments WHERE department_name = 
 
 -- Students
 INSERT INTO users (user_id, first_name, middle_name, last_name, email, role, department_id, matric_no, level) VALUES
-(UUID(), 'John', 'Michael', 'Doe', 'john.doe@student.edu', 'student', @cs_dept, 'CS/19/001', '400'),
+('a1b2c3d4-e5f6-7890-1234-567890abcdef', 'John', 'Michael', 'Doe', 'john.doe@student.edu', 'student', @cs_dept, 'CS/19/001', '400'),
 (UUID(), 'Alice', 'Jane', 'Smith', 'alice.smith@student.edu', 'student', @physics_dept, 'PHY/20/015', '300'),
 (UUID(), 'Bob', 'James', 'Johnson', 'bob.johnson@student.edu', 'student', @math_dept, 'MTH/18/032', '500'),
 (UUID(), 'Mary', 'Elizabeth', 'Williams', 'mary.williams@student.edu', 'student', @env_dept, 'ENV/21/008', '200'),
@@ -143,21 +143,21 @@ INSERT INTO users (user_id, first_name, middle_name, last_name, email, role, dep
 
 -- Staff
 INSERT INTO users (user_id, first_name, middle_name, last_name, email, role, department_id, staff_id, position, office_no) VALUES
-(UUID(), 'Jennifer', 'Marie', 'Anderson', 'jennifer.anderson@staff.edu', 'staff', @cs_dept, 'ST001', 'Research Assistant', 'CS-101'),
+('b2c3d4e5-f6a7-8901-2345-67890abcdef0', 'Jennifer', 'Marie', 'Anderson', 'jennifer.anderson@staff.edu', 'staff', @cs_dept, 'ST001', 'Research Assistant', 'CS-101'),
 (UUID(), 'Michael', 'Anthony', 'Thompson', 'michael.thompson@staff.edu', 'staff', @physics_dept, 'ST002', 'Lab Technician', 'PHY-205'),
 (UUID(), 'Laura', 'Grace', 'Martinez', 'laura.martinez@staff.edu', 'staff', @env_dept, 'ST003', 'Administrative Officer', 'ENV-102'),
 (UUID(), 'Kevin', 'Christopher', 'Garcia', 'kevin.garcia@staff.edu', 'staff', @math_dept, 'ST004', 'Teaching Assistant', 'MTH-301');
 
 -- Supervisors
 INSERT INTO users (user_id, first_name, middle_name, last_name, email, role, department_id, assigned_department, specialization_area, max_documents) VALUES
-(UUID(), 'Dr. Rachel', 'Lynn', 'White', 'rachel.white@supervisor.edu', 'supervisor', @cs_dept, @cs_dept, 'Artificial Intelligence, Machine Learning', 30),
+('c3d4e5f6-a7b8-9012-3456-7890abcdef01', 'Dr. Rachel', 'Lynn', 'White', 'rachel.white@supervisor.edu', 'supervisor', @cs_dept, @cs_dept, 'Artificial Intelligence, Machine Learning', 30),
 (UUID(), 'Prof. Mark', 'Steven', 'Clark', 'mark.clark@supervisor.edu', 'supervisor', @physics_dept, @physics_dept, 'Quantum Physics, Nuclear Research', 25),
 (UUID(), 'Dr. Amanda', 'Rose', 'Lewis', 'amanda.lewis@supervisor.edu', 'supervisor', @env_dept, @env_dept, 'Climate Change, Environmental Policy', 35),
 (UUID(), 'Prof. Richard', 'Thomas', 'Hall', 'richard.hall@supervisor.edu', 'supervisor', @math_dept, @math_dept, 'Pure Mathematics, Statistical Analysis', 20);
 
 -- Admins
 INSERT INTO users (user_id, first_name, middle_name, last_name, email, role, department_id, admin_id, admin_level, permissions_scope) VALUES
-(UUID(), 'Super', 'System', 'Administrator', 'super.admin@admin.edu', 'admin', @cs_dept, 'ADM001', 'super', 'Full system access, user management, system configuration'),
+('d4e5f6a7-b8c9-0123-4567-890abcdef012', 'Super', 'System', 'Administrator', 'super.admin@admin.edu', 'admin', @cs_dept, 'ADM001', 'super', 'Full system access, user management, system configuration'),
 (UUID(), 'Department', 'CS', 'Admin', 'cs.admin@admin.edu', 'admin', @cs_dept, 'ADM002', 'department', 'Computer Science department management'),
 (UUID(), 'Limited', 'Support', 'Admin', 'support.admin@admin.edu', 'admin', @physics_dept, 'ADM003', 'limited', 'Document review and user support');
 

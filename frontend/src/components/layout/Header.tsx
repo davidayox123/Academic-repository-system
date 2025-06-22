@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu,
@@ -20,7 +20,8 @@ import { useThemeStore } from '../../stores/useThemeStore'
 
 const Header: React.FC = () => {
   const location = useLocation()
-  const { currentRole, switchRole, hasSelectedRole, logout } = useAuthStore()
+  const navigate = useNavigate()
+  const { currentRole, switchRole, hasSelectedRole, logout, isAuthenticated } = useAuthStore()
   const { theme, resolvedTheme, setTheme } = useThemeStore()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false)
@@ -54,6 +55,12 @@ const Header: React.FC = () => {
 
   const currentRoleData = roles.find(role => role.value === currentRole)
 
+  // Logout handler with redirect
+  const handleLogout = () => {
+    logout()
+    setTimeout(() => navigate('/login', { replace: true }), 100)
+  }
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -70,8 +77,9 @@ const Header: React.FC = () => {
             <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Academic Repository
             </span>
-          </Link>          {/* Desktop Navigation */}
-          {hasSelectedRole && !isHomePage && (
+          </Link>
+          {/* Desktop Navigation */}
+          {isAuthenticated && hasSelectedRole && !isHomePage && (
             <nav className="hidden md:flex items-center space-x-8">
               {filteredNavItems.map((item) => (
                 <Link
@@ -89,7 +97,6 @@ const Header: React.FC = () => {
               ))}
             </nav>
           )}
-
           {/* Home Link - Only show on non-home pages */}
           {!isHomePage && (
             <nav className="hidden md:flex items-center space-x-8">
@@ -104,52 +111,54 @@ const Header: React.FC = () => {
           )}          {/* Right Side */}
           <div className="flex items-center space-x-4">
             {/* Role Switcher */}
-            <div className="relative">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200"
-              >
-                <div className={`w-3 h-3 rounded-full ${currentRoleData?.color || 'bg-gray-400'}`}></div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {currentRoleData?.label || 'Select Role'}
-                </span>
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              </motion.button>
+            {isAuthenticated && (
+              <div className="relative">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200"
+                >
+                  <div className={`w-3 h-3 rounded-full ${currentRoleData?.color || 'bg-gray-400'}`}></div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    {currentRoleData?.label || 'Select Role'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </motion.button>
 
-              <AnimatePresence>
-                {isRoleMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="py-2">
-                      {roles.map((role) => (
-                        <button
-                          key={role.value}
-                          onClick={() => {
-                            switchRole(role.value as any)
-                            setIsRoleMenuOpen(false)
-                          }}
-                          className={`flex items-center space-x-3 w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                            currentRole === role.value ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                          }`}
-                        >
-                          <div className={`w-3 h-3 rounded-full ${role.color}`}></div>
-                          <span className="text-gray-700 dark:text-gray-200">{role.label}</span>
-                          {currentRole === role.value && (
-                            <UserCheck className="w-4 h-4 text-blue-600 ml-auto" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                <AnimatePresence>
+                  {isRoleMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="py-2">
+                        {roles.map((role) => (
+                          <button
+                            key={role.value}
+                            onClick={() => {
+                              switchRole(role.value as any)
+                              setIsRoleMenuOpen(false)
+                            }}
+                            className={`flex items-center space-x-3 w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                              currentRole === role.value ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                            }`}
+                          >
+                            <div className={`w-3 h-3 rounded-full ${role.color}`}></div>
+                            <span className="text-gray-700 dark:text-gray-200">{role.label}</span>
+                            {currentRole === role.value && (
+                              <UserCheck className="w-4 h-4 text-blue-600 ml-auto" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {/* Theme Switcher */}
             <div className="relative">
@@ -194,19 +203,19 @@ const Header: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>            </div>
-
             {/* Logout Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={logout}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </motion.button>
-
+            {isAuthenticated && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </motion.button>
+            )}
             {/* Mobile Menu Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -217,9 +226,10 @@ const Header: React.FC = () => {
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </motion.button>
           </div>
-        </div>        {/* Mobile Menu */}
+        </div>
+        {/* Mobile Menu */}
         <AnimatePresence>
-          {isMenuOpen && !isHomePage && (
+          {isMenuOpen && !isHomePage && isAuthenticated && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}

@@ -57,7 +57,8 @@ const Home: React.FC = () => {  const navigate = useNavigate()
 
   const handleGetStarted = () => {
     if (selectedRole) {
-      selectRole(selectedRole as any)
+      // TODO: Replace 'user-id-placeholder' with the actual user ID from your auth state/store
+      selectRole(selectedRole as any, 'user-id-placeholder')
       navigate('/dashboard')
     }
   }

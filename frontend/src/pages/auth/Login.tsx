@@ -5,25 +5,26 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/useAuthStore'
 import toast from 'react-hot-toast'
 
-// Demo accounts from database
+// Demo accounts from the database
 const demoAccounts = {
   student: [
-    { id: '1', name: 'John Student', email: 'student1@university.edu', department: 'Computer Science' },
-    { id: '2', name: 'Alice Student', email: 'student2@university.edu', department: 'Physics' },
-    { id: '3', name: 'Bob Student', email: 'student3@university.edu', department: 'Mathematics' }
+    { id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', name: 'John Doe', email: 'john.doe@student.edu', department: 'Computer Science' },
+    { id: 'auto-generated-uuid', name: 'Alice Smith', email: 'alice.smith@student.edu', department: 'Physics' },
+    { id: 'auto-generated-uuid', name: 'Bob Johnson', email: 'bob.johnson@student.edu', department: 'Mathematics' }
   ],
   staff: [
-    { id: '4', name: 'Staff Member', email: 'staff@university.edu', department: 'Environmental Science' }
+    { id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0', name: 'Jennifer Anderson', email: 'jennifer.anderson@staff.edu', department: 'Computer Science' }
   ],
   supervisor: [
-    { id: '5', name: 'Dr. Jane Supervisor', email: 'supervisor@university.edu', department: 'Physics' }
+    { id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01', name: 'Dr. Rachel White', email: 'rachel.white@supervisor.edu', department: 'Computer Science' }
   ],
   admin: [
-    { id: '6', name: 'System Administrator', email: 'admin@university.edu', department: 'Computer Science' }
+    { id: 'd4e5f6a7-b8c9-0123-4567-890abcdef012', name: 'Super Administrator', email: 'super.admin@admin.edu', department: 'Computer Science' }
   ]
 }
 
-const Login: React.FC = () => {  const [selectedRole, setSelectedRole] = useState<'student' | 'staff' | 'supervisor' | 'admin'>('student')
+const Login: React.FC = () => {  
+  const [selectedRole, setSelectedRole] = useState<'student' | 'staff' | 'supervisor' | 'admin'>('student')
   const [selectedAccount, setSelectedAccount] = useState<string>('')
   const navigate = useNavigate()
   const { selectRole } = useAuthStore()
@@ -40,8 +41,8 @@ const Login: React.FC = () => {  const [selectedRole, setSelectedRole] = useStat
       return
     }
 
-    // Set user role in store
-    selectRole(selectedRole)
+    // Set user role and ID in store
+    selectRole(selectedRole, account.id)
 
     toast.success(`Logged in as ${account.name}`)
     navigate('/dashboard')
@@ -68,7 +69,16 @@ const Login: React.FC = () => {  const [selectedRole, setSelectedRole] = useStat
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center py-8">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="mb-6 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all"
+        aria-label="Back to Home"
+      >
+        ← Back
+      </button>
+
       <div className="w-full max-w-md">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
