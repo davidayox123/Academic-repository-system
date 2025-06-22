@@ -17,19 +17,59 @@ interface AuthActions {
   logout: () => void
 }
 
-// Mock user data for different roles
-const createMockUser = (role: UserRole): User => ({
-  id: '1',
-  name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
-  email: `${role}@academic.edu`,
-  role: role,
-  department_id: 'dept-001',
-  department_name: 'Computer Science',
-  avatar: undefined,
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-})
+// Real users from database
+const realUsers: Record<UserRole, User> = {
+  student: {
+    id: '7e3cf886-559d-43de-b69c-f3772398f03a',
+    name: 'Alex Thompson',
+    email: 'student1@university.edu',
+    role: 'student',
+    department_id: '7e3cf886-559d-43de-b69c-f3772398f03a', // Will be updated with real dept ID
+    department_name: 'Computer Science',
+    avatar: undefined,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  staff: {
+    id: '264f717b-55ae-4982-9973-a89cd50c41f9',
+    name: 'Jane Smith',
+    email: 'staff1@university.edu',
+    role: 'staff',
+    department_id: '264f717b-55ae-4982-9973-a89cd50c41f9',
+    department_name: 'Computer Science',
+    avatar: undefined,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  supervisor: {
+    id: '5091d4ee-02cb-4e99-a34b-d98f1bc72811',
+    name: 'Dr. Alice Johnson',
+    email: 'supervisor1@university.edu',
+    role: 'supervisor',
+    department_id: '5091d4ee-02cb-4e99-a34b-d98f1bc72811',
+    department_name: 'Computer Science',
+    avatar: undefined,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  admin: {
+    id: '6c513b2d-0188-4133-8796-aa6c7753d2de',
+    name: 'System Administrator',
+    email: 'admin@university.edu',
+    role: 'admin',
+    department_id: '6c513b2d-0188-4133-8796-aa6c7753d2de',
+    department_name: 'Computer Science',
+    avatar: undefined,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+}
+
+const createMockUser = (role: UserRole): User => realUsers[role]
 
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(

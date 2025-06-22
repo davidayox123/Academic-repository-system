@@ -15,6 +15,7 @@ router = APIRouter()
 @router.get("/stats")
 async def get_dashboard_stats(
     role: str = Query("student"),
+    user_id: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
@@ -105,10 +106,9 @@ async def get_dashboard_stats(
                     )
                 ).count(),
                 "approved_documents": db.query(Document).filter(
-                    and_(Document.status == DocumentStatus.APPROVED, where_clause)
-                ).count(),
+                    and_(Document.status == DocumentStatus.APPROVED, where_clause)                ).count(),
                 "my_uploads": db.query(Document).filter(
-                    and_(Document.uploader_id == "mock-user-id", where_clause)
+                    and_(Document.uploader_id == user_id, where_clause) if user_id else where_clause
                 ).count(),
                 "pending_reviews": db.query(Document).filter(
                     and_(Document.status == DocumentStatus.PENDING, where_clause)
@@ -118,32 +118,35 @@ async def get_dashboard_stats(
             
         else:  # student
             # Student sees their own statistics
+            if not user_id:
+                raise HTTPException(status_code=400, detail="User ID required for student dashboard")
+                
             stats = {
-                "my_documents": db.query(Document).filter(Document.uploader_id == "mock-user-id").count(),
+                "my_documents": db.query(Document).filter(Document.uploader_id == user_id).count(),
                 "pending_reviews": db.query(Document).filter(
                     and_(
-                        Document.uploader_id == "mock-user-id",
+                        Document.uploader_id == user_id,
                         Document.status == DocumentStatus.PENDING
                     )
                 ).count(),
                 "approved_documents": db.query(Document).filter(
                     and_(
-                        Document.uploader_id == "mock-user-id",
+                        Document.uploader_id == user_id,
                         Document.status == DocumentStatus.APPROVED
                     )
                 ).count(),
                 "total_downloads": db.query(Download).join(Document).filter(
-                    Document.uploader_id == "mock-user-id"
+                    Document.uploader_id == user_id
                 ).count(),
                 "recent_uploads": db.query(Document).filter(
                     and_(
-                        Document.uploader_id == "mock-user-id",
+                        Document.uploader_id == user_id,
                         Document.upload_date >= datetime.now() - timedelta(days=30)
                     )
                 ).count(),
                 "storage_used_mb": round(
                     (db.query(func.sum(Document.file_size)).filter(
-                        Document.uploader_id == "mock-user-id"
+                        Document.uploader_id == user_id
                     ).scalar() or 0) / 1024 / 1024, 2
                 )
             }
@@ -156,6 +159,7 @@ async def get_dashboard_stats(
 @router.get("/recent-documents")
 async def get_recent_documents(
     role: str = Query("student"),
+    user_id: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db)
@@ -183,7 +187,8 @@ async def get_recent_documents(
                 query = query.filter(Document.department_id == department_id)
         else:  # student
             # Student sees only their documents
-            query = query.filter(Document.uploader_id == "mock-user-id")
+            if user_id:
+                query = query.filter(Document.uploader_id == user_id)
         
         # Get recent documents
         documents = query.order_by(desc(Document.upload_date)).limit(limit).all()
@@ -212,6 +217,7 @@ async def get_recent_documents(
 @router.get("/recent-activity")
 async def get_recent_activity(
     role: str = Query("student"),
+    user_id: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
@@ -242,19 +248,20 @@ async def get_recent_activity(
                             ActivityType.DOCUMENT_REJECTED
                         ])
                     )
-                )
+                )        
         elif role == "staff":
             # Staff sees department activities
             if department_id:
                 query = query.filter(ActivityLog.department_id == department_id)
         else:  # student
             # Student sees their own activities and public activities
-            query = query.filter(
-                or_(
-                    ActivityLog.user_id == "mock-user-id",
-                    ActivityLog.is_public == '1'
+            if user_id:
+                query = query.filter(
+                    or_(
+                        ActivityLog.user_id == user_id,
+                        ActivityLog.is_public == '1'
+                    )
                 )
-            )
         
         # Get recent activities
         activities = query.order_by(desc(ActivityLog.timestamp)).limit(limit).all()

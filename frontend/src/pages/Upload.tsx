@@ -148,8 +148,7 @@ const Upload: React.FC = () => {
     setIsUploading(true)
     
     try {
-      const uploadPromises = files.map(async (file) => {
-        // Update file status to uploading
+      const uploadPromises = files.map(async (file) => {        // Update file status to uploading
         setFiles(prev => prev.map(f => 
           f.id === file.id ? { ...f, status: 'uploading' } : f
         ))
@@ -162,6 +161,7 @@ const Upload: React.FC = () => {
         formData.append('tags', metadata.tags.join(','))
         formData.append('course_code', metadata.course_code)
         formData.append('is_public', 'false')
+        formData.append('uploader_id', user?.id || '')  // Add uploader_id
 
         try {
           const response = await documentsApi.uploadDocument(formData, (progressEvent) => {
@@ -178,14 +178,29 @@ const Upload: React.FC = () => {
             f.id === file.id ? { ...f, status: 'success', progress: 100 } : f
           ))
 
-          return response.data
-        } catch (error: any) {
+          return response.data        } catch (error: any) {
           // Mark as failed
+          let errorMessage = 'Upload failed'
+          
+          // Handle different types of errors
+          if (error.response?.data?.detail) {
+            if (Array.isArray(error.response.data.detail)) {
+              // Handle Pydantic validation errors
+              errorMessage = error.response.data.detail.map((err: any) => err.msg || err.message || 'Validation error').join(', ')
+            } else if (typeof error.response.data.detail === 'string') {
+              errorMessage = error.response.data.detail
+            } else {
+              errorMessage = 'Validation error'
+            }
+          } else if (error.message) {
+            errorMessage = error.message
+          }
+          
           setFiles(prev => prev.map(f => 
             f.id === file.id ? { 
               ...f, 
               status: 'error', 
-              error: error.response?.data?.detail || 'Upload failed' 
+              error: errorMessage
             } : f
           ))
           throw error

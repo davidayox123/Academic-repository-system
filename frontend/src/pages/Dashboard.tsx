@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useDashboardStore, startDashboardAutoRefresh, stopDashboardAutoRefresh } from '../stores/useDashboardStore'
-import { useWebSocket } from '../hooks/useWebSocket'
 import { Link } from 'react-router-dom'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { formatDistanceToNow } from 'date-fns'
@@ -28,23 +27,16 @@ const Dashboard: React.FC = () => {
     error, 
     lastUpdated,
     fetchAllDashboardData,
-    clearError
-  } = useDashboardStore()  // WebSocket for real-time updates
-  useWebSocket({
-    onMessage: (message) => {
-      if (message.type === 'document_uploaded') {
-        toast.success('New document uploaded!')
-      } else if (message.type === 'document_reviewed') {
-        toast('Document review completed', { icon: 'ℹ️' })
-      }
-    },
-    onConnect: () => {
-      console.log('Dashboard WebSocket connected')
-    },
-    onDisconnect: () => {
-      console.log('Dashboard WebSocket disconnected')
-    }
-  })
+    clearError  } = useDashboardStore()
+
+  // Auto-refresh dashboard data every 30 seconds (replaces WebSocket)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAllDashboardData()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     // Fetch initial data

@@ -202,18 +202,17 @@ manager = ConnectionManager()
 @router.websocket("/ws/{connection_id}")
 async def websocket_endpoint(
     websocket: WebSocket, 
-    connection_id: str,
-    db: Session = Depends(get_db)
+    connection_id: str
 ):
+    """
+    WebSocket endpoint that doesn't hold database connections.
+    Database connections are created only when needed and immediately closed.
+    """
     try:
-        # Get user from WebSocket (you'll need to implement auth for WebSocket)
-        # For now, we'll extract user_id from the connection_id or query params
-        # In production, you should implement proper WebSocket authentication
-        
         # Accept connection first
         await websocket.accept()
         
-        # Try to get user info from query parameters or headers
+        # Try to get user info from query parameters
         query_params = dict(websocket.query_params)
         user_id = query_params.get('user_id')
         
@@ -223,10 +222,21 @@ async def websocket_endpoint(
                 "message": "Authentication required"
             }))
             await websocket.close()
-            return        # Verify user exists (but allow connection even if user doesn't exist for demo purposes)
-        user = db.query(User).filter(User.id == user_id).first()
+            return
         
-        # Add to connection manager regardless of user validation (for demo purposes)
+        # Verify user exists (create DB connection only when needed)
+        user = None
+        try:
+            from app.core.database import SessionLocal
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == user_id).first()
+            finally:
+                db.close()  # Immediately close the DB connection
+        except Exception as e:
+            logging.error(f"Database error during user verification: {e}")
+        
+        # Add to connection manager
         manager.active_connections[connection_id] = websocket
         if user_id not in manager.user_connections:
             manager.user_connections[user_id] = []

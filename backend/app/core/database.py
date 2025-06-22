@@ -5,16 +5,15 @@ from typing import Generator
 from .config import settings
 import logging
 
-# Create database engine
+# Create database engine with improved connection management
 engine = create_engine(
     settings.DATABASE_URL,
     echo=settings.DATABASE_ECHO,
     pool_pre_ping=True,
-    pool_recycle=300,
-    pool_size=10,  # Increase pool size
-    max_overflow=20,  # Allow more overflow connections
-    pool_timeout=30,  # Timeout for getting connection
-    connect_args={"charset": "utf8mb4"}
+    pool_recycle=300,  # Recycle connections every 5 minutes
+    pool_size=10,      # Base pool size
+    max_overflow=20,   # Allow overflow connections
+    pool_timeout=30    # Timeout for getting connection
 )
 
 # Create session factory

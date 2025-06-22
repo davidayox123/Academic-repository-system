@@ -96,7 +96,7 @@ export const authApi = {
 
 // Documents API
 export const documentsApi = {
-  getDocuments: (filters?: DocumentFilter & { role?: string }): Promise<AxiosResponse<ApiResponse<PaginatedResponse<Document>>>> => {
+  getDocuments: (filters?: DocumentFilter & { role?: string }): Promise<AxiosResponse<PaginatedResponse<Document>>> => {
     return api.get('/documents', { params: filters })
   },
 
@@ -104,12 +104,12 @@ export const documentsApi = {
     const params = role ? { role } : {}
     return api.get(`/documents/${id}`, { params })
   },
-
   uploadDocument: (data: FormData, onUploadProgress?: (progressEvent: any) => void): Promise<AxiosResponse<Document>> => {
     return api.post('/documents/upload', data, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 120000, // 2 minutes for file uploads
       onUploadProgress,
     })
   },
@@ -133,16 +133,25 @@ export const documentsApi = {
   deleteDocument: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
     return api.delete(`/documents/${id}`)
   },
-
-  downloadDocument: (id: string): Promise<AxiosResponse<Blob>> => {
+  downloadDocument: (id: string, userId?: string): Promise<AxiosResponse<Blob>> => {
+    const params = userId ? { user_id: userId } : {}
     return api.get(`/documents/${id}/download`, {
       responseType: 'blob',
+      params
     })
   },
-
   getDocumentStats: (role?: string): Promise<AxiosResponse<ApiResponse<DocumentStats>>> => {
     const params = role ? { role } : {}
     return api.get('/documents/stats', { params })
+  },
+
+  reviewDocument: (id: string, action: 'approve' | 'reject', comments?: string, reviewerId?: string): Promise<AxiosResponse<{ message: string }>> => {
+    const formData = new FormData()
+    formData.append('action', action)
+    if (comments) formData.append('comments', comments)
+    if (reviewerId) formData.append('reviewer_id', reviewerId)
+    
+    return api.post(`/documents/${id}/review`, formData)
   },
 }
 
@@ -233,8 +242,184 @@ export const auditApi = {
     page?: number
     limit?: number
   }): Promise<AxiosResponse<ApiResponse<PaginatedResponse<AuditLog>>>> => {
-    return api.get('/audit', { params: filters })
+    return api.get('/audit', { params: filters })  },
+}
+
+// Admin API
+export const adminApi = {
+  // User Management
+  getUsers: (filters?: {
+    skip?: number
+    limit?: number
+    role?: string
+    department?: string
+    search?: string
+  }): Promise<AxiosResponse<{
+    items: Array<{
+      id: string
+      name: string
+      email: string
+      role: string
+      department_name: string
+      is_active: boolean
+      created_at: string
+    }>
+    total: number
+    skip: number
+    limit: number
+  }>> => {
+    return api.get('/users', { params: filters })
   },
+
+  getUser: (id: string): Promise<AxiosResponse<{
+    id: string
+    name: string
+    email: string
+    role: string
+    department_name: string
+    is_active: boolean
+    created_at: string
+    updated_at?: string
+  }>> => {
+    return api.get(`/users/${id}`)
+  },
+  getUserStats: (): Promise<AxiosResponse<{
+    total_users: number
+    active_users: number
+    by_role: {
+      students: number
+      staff: number
+      supervisors: number
+      admins: number
+    }
+    departments_count: number
+  }>> => {
+    return api.get('/users/stats/overview')
+  },
+
+  createUser: (userData: {
+    name: string
+    email: string
+    role: string
+    department_id?: string
+    is_active?: boolean
+  }): Promise<AxiosResponse<{
+    id: string
+    name: string
+    email: string
+    role: string
+    department_name: string
+    is_active: boolean
+    created_at: string
+  }>> => {
+    return api.post('/users', userData)
+  },
+
+  updateUser: (id: string, userData: {
+    name?: string
+    email?: string
+    role?: string
+    department_id?: string
+    is_active?: boolean
+  }): Promise<AxiosResponse<{
+    id: string
+    name: string
+    email: string
+    role: string
+    department_name: string
+    is_active: boolean
+    created_at: string
+    updated_at?: string
+  }>> => {
+    return api.put(`/users/${id}`, userData)
+  },
+
+  deleteUser: (id: string): Promise<AxiosResponse<{ message: string }>> => {
+    return api.delete(`/users/${id}`)
+  },
+
+  getDepartments: (): Promise<AxiosResponse<Array<{
+    id: string
+    name: string
+    description?: string
+  }>>> => {
+    return api.get('/users/departments/list')
+  },
+
+  // Analytics
+  getAnalyticsOverview: (): Promise<AxiosResponse<{
+    overview: {
+      total_users: number
+      total_documents: number
+      total_departments: number
+      total_downloads: number
+    }
+    document_status: {
+      approved: number
+      pending: number
+      under_review: number
+      rejected: number
+    }
+    recent_activity: {
+      new_users_30d: number
+      new_documents_30d: number
+    }
+  }>> => {
+    return api.get('/analytics/overview')
+  },
+
+  getDocumentsByDepartment: (): Promise<AxiosResponse<Array<{
+    department: string
+    document_count: number
+  }>>> => {
+    return api.get('/analytics/documents/by-department')
+  },
+
+  getDocumentsByCategory: (): Promise<AxiosResponse<Array<{
+    category: string
+    document_count: number
+  }>>> => {
+    return api.get('/analytics/documents/by-category')
+  },
+
+  getDocumentsByMonth: (months: number = 12): Promise<AxiosResponse<Array<{
+    year: number
+    month: number
+    document_count: number
+    month_name: string
+  }>>> => {
+    return api.get('/analytics/documents/by-month', { params: { months } })
+  },
+
+  getUsersByRole: (): Promise<AxiosResponse<Array<{
+    role: string
+    user_count: number
+  }>>> => {
+    return api.get('/analytics/users/by-role')
+  },
+
+  getTopDepartments: (limit: number = 10): Promise<AxiosResponse<Array<{
+    department: string
+    user_count: number
+    document_count: number
+  }>>> => {
+    return api.get('/analytics/top-departments', { params: { limit } })
+  },
+
+  getDownloadStats: (): Promise<AxiosResponse<{
+    most_downloaded: Array<{
+      title: string
+      download_count: number
+      uploader: string
+      department: string
+    }>
+    by_category: Array<{
+      category: string
+      total_downloads: number
+    }>
+  }>> => {
+    return api.get('/analytics/download-stats')
+  }
 }
 
 // Utility functions

@@ -5,26 +5,34 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from './useAuthStore'
 
 interface DashboardStats {
-  total_documents: {
-    value: number
-    change: string
-    change_type: 'positive' | 'negative' | 'neutral'
-  }
-  pending_reviews: {
-    value: number
-    change: string
-    change_type: 'positive' | 'negative' | 'neutral'
-  }
-  approved_documents: {
-    value: number
-    change: string
-    change_type: 'positive' | 'negative' | 'neutral'
-  }
-  total_downloads: {
-    value: number
-    change: string
-    change_type: 'positive' | 'negative' | 'neutral'
-  }
+  // Admin stats
+  total_users?: number
+  total_documents?: number
+  total_departments?: number
+  pending_reviews?: number
+  approved_documents?: number
+  rejected_documents?: number
+  under_review?: number
+  total_downloads?: number
+  storage_used_mb?: number
+  recent_uploads?: number
+  active_users?: number
+  category_stats?: Array<{ name: string; count: number }>
+  department_stats?: Array<{ name: string; count: number }>
+  
+  // Supervisor stats
+  assigned_reviews?: number
+  completed_reviews?: number
+  department_documents?: number
+  recent_submissions?: number
+  avg_review_time?: number
+  review_workload?: string
+  
+  // Staff stats
+  my_uploads?: number
+  
+  // Student stats
+  my_documents?: number
 }
 
 interface RecentDocument {
@@ -80,13 +88,17 @@ export const useDashboardStore = create<DashboardState>()(
       try {
         set({ isLoading: true, error: null })
         
-        // Get current role from auth store
+        // Get current role and user from auth store
         const authStore = useAuthStore.getState()
         const currentRole = authStore.user?.role
+        const userId = authStore.user?.id
         
-        const response = await api.get('/dashboard/stats', {
-          params: currentRole ? { role: currentRole } : {}
-        })
+        const params: any = {}
+        if (currentRole) params.role = currentRole
+        if (userId) params.user_id = userId
+        if (authStore.user?.department_id) params.department_id = authStore.user.department_id
+        
+        const response = await api.get('/dashboard/stats', { params })
         set({ 
           stats: response.data,
           isLoading: false,
@@ -104,13 +116,17 @@ export const useDashboardStore = create<DashboardState>()(
       try {
         set({ isLoading: true, error: null })
         
-        // Get current role from auth store
+        // Get current role and user from auth store
         const authStore = useAuthStore.getState()
         const currentRole = authStore.user?.role
+        const userId = authStore.user?.id
         
-        const response = await api.get('/dashboard/recent-documents', {
-          params: currentRole ? { role: currentRole } : {}
-        })
+        const params: any = {}
+        if (currentRole) params.role = currentRole
+        if (userId) params.user_id = userId
+        if (authStore.user?.department_id) params.department_id = authStore.user.department_id
+        
+        const response = await api.get('/dashboard/recent-documents', { params })
         set({ 
           recentDocuments: response.data,
           isLoading: false,
@@ -128,13 +144,17 @@ export const useDashboardStore = create<DashboardState>()(
       try {
         set({ isLoading: true, error: null })
         
-        // Get current role from auth store
+        // Get current role and user from auth store
         const authStore = useAuthStore.getState()
         const currentRole = authStore.user?.role
+        const userId = authStore.user?.id
         
-        const response = await api.get('/dashboard/activity', {
-          params: currentRole ? { role: currentRole } : {}
-        })
+        const params: any = {}
+        if (currentRole) params.role = currentRole
+        if (userId) params.user_id = userId
+        if (authStore.user?.department_id) params.department_id = authStore.user.department_id
+        
+        const response = await api.get('/dashboard/activity', { params })
         set({ 
           recentActivity: response.data,
           isLoading: false,
@@ -148,14 +168,24 @@ export const useDashboardStore = create<DashboardState>()(
           toast.error(message)
         }
       }
-    },fetchAllDashboardData: async () => {
+    },    fetchAllDashboardData: async () => {
       try {
         set({ isLoading: true, error: null })
         
+        // Get current role and user from auth store
+        const authStore = useAuthStore.getState()
+        const currentRole = authStore.user?.role
+        const userId = authStore.user?.id
+        
+        const params: any = {}
+        if (currentRole) params.role = currentRole
+        if (userId) params.user_id = userId
+        if (authStore.user?.department_id) params.department_id = authStore.user.department_id
+        
         const [statsResponse, documentsResponse, activityResponse] = await Promise.all([
-          api.get('/dashboard/stats'),
-          api.get('/dashboard/recent-documents'),
-          api.get('/dashboard/recent-activity')
+          api.get('/dashboard/stats', { params }),
+          api.get('/dashboard/recent-documents', { params }),
+          api.get('/dashboard/recent-activity', { params })
         ])
 
         set({

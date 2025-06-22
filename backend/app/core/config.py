@@ -7,9 +7,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "Academic Repository System"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
-    
-    # Database settings
-    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/academic_repo_db"
+      # Database settings
+    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/academic_repo_db?charset=utf8mb4"
     DATABASE_ECHO: bool = False
     
     # Security settings

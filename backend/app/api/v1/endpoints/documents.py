@@ -200,6 +200,7 @@ async def upload_document(
     department_id: str = Form(""),
     course_code: str = Form(""),
     is_public: bool = Form(False),
+    uploader_id: str = Form(""),  # Add uploader_id parameter
     db: Session = Depends(get_db)
 ):
     """Upload a new document"""
@@ -220,22 +221,23 @@ async def upload_document(
         
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File too large")
-        
-        # Get first department if none provided
+          # Get first department if none provided
         if not department_id:
             first_dept = db.query(Department).first()
             department_id = first_dept.id if first_dept else None
+        
+        # Use provided uploader_id or fallback to mock user for demo
+        if not uploader_id:
+            uploader_id = "7e3cf886-559d-43de-b69c-f3772398f03a"  # Default to student user
         
         # Create document record
         document_id = str(uuid.uuid4())
         filename = f"{document_id}{file_ext}"
         file_path = DOCUMENTS_DIR / filename
         
-        # Save file
-        with open(file_path, "wb") as f:
-            f.write(content)
-        
-        # Create database record
+        # Save file asynchronously
+        async with aiofiles.open(file_path, 'wb') as f:
+            await f.write(content)        # Create database record
         document = Document(
             id=document_id,
             title=title,
@@ -244,23 +246,49 @@ async def upload_document(
             original_filename=file.filename,
             file_path=str(file_path),
             file_size=len(content),
-            content_type=file.content_type or "application/octet-stream",
-            file_hash=hashlib.md5(content).hexdigest(),
+            mime_type=file.content_type or "application/octet-stream",
+            file_type=file.content_type or "application/octet-stream",
+            file_extension=Path(file.filename).suffix.lower(),
             category=DocumentCategory(category),
             document_type=get_document_type(file.filename),
             tags=tags.split(',') if tags else [],
             department_id=department_id,
             course_code=course_code,
-            author_id="1",  # Mock user ID
+            uploader_id=uploader_id,  # Use the actual uploader_id
             is_public=is_public,
             status=DocumentStatus.PENDING
         )
-        
         db.add(document)
         db.commit()
         db.refresh(document)
         
-        return document
+        # Get the uploader and department info for the response
+        uploader = db.query(User).filter(User.id == uploader_id).first()
+        department = db.query(Department).filter(Department.id == department_id).first()
+        
+        # Create the response with the correct format
+        response_data = {
+            "id": document.id,
+            "title": document.title,
+            "description": document.description,
+            "category": document.category.value,
+            "tags": document.tags or [],
+            "department": department.name if department else "Unknown",
+            "course_code": document.course_code,
+            "filename": document.original_filename,
+            "file_size": document.file_size,
+            "file_type": document.file_type,
+            "status": document.status.value,
+            "uploaded_by": uploader.name if uploader else "Unknown",
+            "reviewed_by": None,
+            "review_comments": None,
+            "reviewed_at": None,
+            "created_at": document.created_at,
+            "updated_at": document.updated_at,
+            "download_url": f"/api/v1/documents/{document.id}/download"
+        }
+        
+        return response_data
         
     except HTTPException:
         raise
@@ -302,8 +330,7 @@ async def upload_document(
                 tag_list = [tag.strip() for tag in tag_list if tag.strip()]
             except:
                 tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
-        
-        # Create document record
+          # Create document record
         document = Document(
             id=document_id,
             title=title,
@@ -312,7 +339,6 @@ async def upload_document(
             original_filename=file.filename,
             file_path=str(file_path),
             file_size=file_size,
-            file_type=file.content_type or "application/octet-stream",
             file_extension=file_extension,
             mime_type=mimetypes.guess_type(file.filename)[0] or "application/octet-stream",
             category=DocumentCategory(category),
@@ -321,15 +347,14 @@ async def upload_document(
             course_code=course_code,
             academic_year=academic_year,
             semester=semester,
-            is_public=is_public,
-            uploader_id="mock-user-id",  # For now, using mock user
-            department_id=department_id or "mock-dept-id",
+            is_public=is_public,            uploader_id=uploader_id or "7e3cf886-559d-43de-b69c-f3772398f03a",  # Use real uploader_id
+            department_id=department_id or "7e3cf886-559d-43de-b69c-f3772398f03a",
             status=DocumentStatus.PENDING
         )
         
         db.add(document)
-        await db.commit()
-        await db.refresh(document)
+        db.commit()
+        db.refresh(document)
         
         # Generate thumbnail (async)
         try:
@@ -512,6 +537,8 @@ async def get_documents(
     category: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    user_id: Optional[str] = Query(None),
     sort_by: str = Query("upload_date"),
     sort_order: str = Query("desc"),
     db: Session = Depends(get_db)
@@ -539,9 +566,30 @@ async def get_documents(
         
         if status:
             query = query.filter(Document.status == DocumentStatus(status))
-        
         if department_id:
             query = query.filter(Document.department_id == department_id)
+        
+        # Apply role-based filtering
+        if role and user_id:
+            if role == "student":
+                # Students see only their own documents
+                query = query.filter(Document.uploader_id == user_id)
+            elif role == "staff":
+                # Staff see their own documents + department documents
+                user = db.query(User).filter(User.id == user_id).first()
+                if user and user.department_id:
+                    query = query.filter(
+                        or_(
+                            Document.uploader_id == user_id,
+                            Document.department_id == user.department_id
+                        )
+                    )
+            elif role == "supervisor":
+                # Supervisors see department documents they supervise
+                user = db.query(User).filter(User.id == user_id).first()
+                if user and user.department_id:
+                    query = query.filter(Document.department_id == user.department_id)
+            # Admin sees all documents (no additional filter)
         
         # Apply sorting
         sort_column = getattr(Document, sort_by, Document.upload_date)
@@ -644,32 +692,48 @@ async def get_document(
 async def download_document(
     document_id: str,
     request: Request,
+    user_id: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Download a document file"""
-    document = db.query(Document).filter(Document.id == document_id).first()
-    
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    file_path = Path(document.file_path)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found on server")
-    
-    # Create download record
-    download_record = Download(
-        document_id=document_id,
-        user_id="mock-user-id",
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-        file_size_at_download=document.file_size,
-        download_source="web"
-    )
-    
-    db.add(download_record)
-    
-    # Update download count
-    document.download_count = (document.download_count or 0) + 1
+    try:
+        document = db.query(Document).filter(Document.id == document_id).first()
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        file_path = Path(document.file_path)
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        # Create download record
+        download_record = Download(
+            document_id=document_id,
+            user_id=user_id or "anonymous",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            file_size_at_download=document.file_size,
+            download_source="web"
+        )
+        
+        db.add(download_record)
+        
+        # Update download count
+        document.download_count = (document.download_count or 0) + 1
+        db.commit()
+        
+        # Return file with proper headers
+        return FileResponse(
+            path=file_path,
+            filename=document.original_filename,
+            media_type=document.mime_type or 'application/octet-stream'
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Download error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
     await db.commit()
     
     # Log download activity
@@ -801,12 +865,20 @@ async def review_document(
     document_id: str,
     action: str = Form(...),  # "approve" or "reject"
     comments: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    reviewer_id: str = Form(...),  # ID of the reviewing user
+    db: Session = Depends(get_db)
 ):
     """Review a document (approve or reject)"""
     
-    if current_user.role not in ["supervisor", "admin"]:
+    # Get reviewer user
+    reviewer = db.query(User).filter(User.id == reviewer_id).first()
+    if not reviewer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reviewer not found"
+        )
+    
+    if reviewer.role not in ["supervisor", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only supervisors and admins can review documents"
@@ -826,13 +898,39 @@ async def review_document(
         )
     
     # Update document status
-    document.status = "approved" if action == "approve" else "rejected"
-    document.reviewed_by = current_user.id
-    document.review_comments = comments
-    document.reviewed_at = datetime.utcnow()
+    document.status = DocumentStatus.APPROVED if action == "approve" else DocumentStatus.REJECTED
+    document.supervisor_id = reviewer.id  # Use supervisor_id field
+    document.reviewer_comments = comments
+    document.approval_date = datetime.utcnow() if action == "approve" else None
+    document.rejection_reason = comments if action == "reject" else None
     document.updated_at = datetime.utcnow()
+      # Log the review activity
+    try:
+        activity = ActivityLog(
+            user_id=reviewer_id,
+            activity_type=ActivityType.DOCUMENT_REVIEWED,
+            activity_level=ActivityLevel.MEDIUM,
+            message=f"Document '{document.title}' {action}d by {reviewer.name}",
+            metadata_json={"document_id": document_id, "action": action, "comments": comments}
+        )
+        db.add(activity)
+    except Exception as e:
+        logging.error(f"Error logging review activity: {e}")
     
     db.commit()
+    
+    # Send WebSocket notification
+    try:
+        await notify_document_uploaded({
+            "type": "document_reviewed",
+            "document_id": document_id,
+            "document_title": document.title,
+            "action": action,
+            "reviewer": reviewer.name,
+            "comments": comments
+        })
+    except Exception as e:
+        logging.error(f"Error sending WebSocket notification: {e}")
     
     return {"message": f"Document {action}d successfully"}
 
