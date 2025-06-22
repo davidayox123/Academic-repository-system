@@ -164,15 +164,14 @@ const Upload: React.FC = () => {
           f.id === file.id ? { ...f, status: 'uploading' } : f
         ))
 
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('title', metadata.title)
-        formData.append('description', metadata.description)
-        formData.append('category', metadata.category)
-        formData.append('tags', metadata.tags.join(','))
-        formData.append('course_code', metadata.course_code)
-        formData.append('is_public', 'false')
-        formData.append('uploader_id', user?.id || '')  // Add uploader_id
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('title', metadata.title);
+        formData.append('uploader_id', user?.id || '');
+        formData.append('department_id', metadata.department_id);
+        // Optionally: if you have supervisor_id, add it here
+        // if (metadata.supervisor_id) formData.append('supervisor_id', metadata.supervisor_id);
+        // Do NOT append description, category, tags, course_code, is_public, keywords, publication_year, authors, abstract, subject_area
 
         try {
           const response = await documentsApi.uploadDocument(formData, (progressEvent) => {

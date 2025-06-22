@@ -31,7 +31,7 @@ async def get_dashboard_stats(
                 "total_users": db.query(User).count(),
                 "total_documents": db.query(Document).count(),
                 "total_departments": db.query(Department).count(),
-                "pending_reviews": db.query(Document).filter(Document.status == DocumentStatus.PENDING).count(),
+                "pending_reviews": db.query(Document).filter(Document.status == DocumentStatus.SUBMITTED).count(),
                 "approved_documents": db.query(Document).filter(Document.status == DocumentStatus.APPROVED).count(),
                 "rejected_documents": db.query(Document).filter(Document.status == DocumentStatus.REJECTED).count(),
                 "under_review": db.query(Document).filter(Document.status == DocumentStatus.UNDER_REVIEW).count(),
@@ -44,16 +44,10 @@ async def get_dashboard_stats(
                 ).count(),
                 "active_users": db.query(User).filter(User.is_active == True).count(),
                 
-                # Category breakdown
-                "category_stats": [
-                    {"name": category[0].value, "count": category[1]} 
-                    for category in db.query(Document.category, func.count(Document.id)).group_by(Document.category).all()
-                ],
-                
                 # Department breakdown
                 "department_stats": [
                     {"name": dept[0], "count": dept[1]} 
-                    for dept in db.query(Department.name, func.count(Document.id)).join(Document).group_by(Department.name).all()
+                    for dept in db.query(Department.department_name, func.count(Document.id)).join(Document, Document.department_id == Department.department_id).group_by(Department.department_name).all()
                 ]
             }
             
@@ -66,14 +60,12 @@ async def get_dashboard_stats(
             where_clause = and_(*query_filter) if query_filter else True
             
             stats = {
-                "assigned_reviews": db.query(Review).filter(
-                    and_(Review.status == "pending", *query_filter) if query_filter else Review.status == "pending"
+                "assigned_reviews": db.query(Document).filter(
+                    and_(Document.status == DocumentStatus.SUBMITTED, Document.supervisor_id == user_id)
                 ).count(),
-                "completed_reviews": db.query(Review).filter(
-                    and_(Review.status == "completed", *query_filter) if query_filter else Review.status == "completed"
-                ).count(),
+                "completed_reviews": db.query(Review).filter(Review.user_id == user_id).count(),
                 "pending_documents": db.query(Document).filter(
-                    and_(Document.status == DocumentStatus.PENDING, where_clause)
+                    and_(Document.status == DocumentStatus.SUBMITTED, where_clause)
                 ).count(),
                 "approved_documents": db.query(Document).filter(
                     and_(Document.status == DocumentStatus.APPROVED, where_clause)
@@ -99,218 +91,156 @@ async def get_dashboard_stats(
             
             stats = {
                 "department_documents": db.query(Document).filter(where_clause).count(),
-                "recent_uploads": db.query(Document).filter(
+                "approved_documents": db.query(Document).filter(
+                    and_(Document.status == DocumentStatus.APPROVED, where_clause)
+                ).count(),
+                "pending_documents": db.query(Document).filter(
+                    and_(Document.status == DocumentStatus.SUBMITTED, where_clause)
+                ).count(),
+                "rejected_documents": db.query(Document).filter(
+                    and_(Document.status == DocumentStatus.REJECTED, where_clause)
+                ).count(),
+                "your_uploads": db.query(Document).filter(
+                    and_(Document.uploader_id == user_id, where_clause)
+                ).count(),
+                "recent_department_uploads": db.query(Document).filter(
                     and_(
-                        Document.upload_date >= datetime.now() - timedelta(days=30),
+                        Document.upload_date >= datetime.now() - timedelta(days=7),
                         where_clause
                     )
                 ).count(),
-                "approved_documents": db.query(Document).filter(
-                    and_(Document.status == DocumentStatus.APPROVED, where_clause)                ).count(),
-                "my_uploads": db.query(Document).filter(
-                    and_(Document.uploader_id == user_id, where_clause) if user_id else where_clause
-                ).count(),
-                "pending_reviews": db.query(Document).filter(
-                    and_(Document.status == DocumentStatus.PENDING, where_clause)
-                ).count(),
-                "total_downloads": db.query(Download).join(Document).filter(where_clause).count()
+                "total_department_users": db.query(User).filter(User.department_id == department_id).count(),
+                "storage_used_department_mb": round((db.query(func.sum(Document.file_size)).filter(where_clause).scalar() or 0) / 1024 / 1024, 2)
             }
             
-        else:  # student
+        elif role == "student":
             # Student sees their own statistics
-            if not user_id:
-                raise HTTPException(status_code=400, detail="User ID required for student dashboard")
-                
             stats = {
-                "my_documents": db.query(Document).filter(Document.uploader_id == user_id).count(),
+                "total_uploads": db.query(Document).filter(Document.uploader_id == user_id).count(),
+                "approved_uploads": db.query(Document).filter(
+                    and_(Document.uploader_id == user_id, Document.status == DocumentStatus.APPROVED)
+                ).count(),
+                "rejected_uploads": db.query(Document).filter(
+                    and_(Document.uploader_id == user_id, Document.status == DocumentStatus.REJECTED)
+                ).count(),
                 "pending_reviews": db.query(Document).filter(
-                    and_(
-                        Document.uploader_id == user_id,
-                        Document.status == DocumentStatus.PENDING
-                    )
+                    and_(Document.uploader_id == user_id, Document.status == DocumentStatus.SUBMITTED)
                 ).count(),
-                "approved_documents": db.query(Document).filter(
-                    and_(
-                        Document.uploader_id == user_id,
-                        Document.status == DocumentStatus.APPROVED
-                    )
+                "under_review": db.query(Document).filter(
+                    and_(Document.uploader_id == user_id, Document.status == DocumentStatus.UNDER_REVIEW)
                 ).count(),
-                "total_downloads": db.query(Download).join(Document).filter(
-                    Document.uploader_id == user_id
-                ).count(),
-                "recent_uploads": db.query(Document).filter(
-                    and_(
-                        Document.uploader_id == user_id,
-                        Document.upload_date >= datetime.now() - timedelta(days=30)
-                    )
-                ).count(),
-                "storage_used_mb": round(
-                    (db.query(func.sum(Document.file_size)).filter(
-                        Document.uploader_id == user_id
-                    ).scalar() or 0) / 1024 / 1024, 2
-                )
+                "total_downloads": db.query(Download).join(Document).filter(Document.uploader_id == user_id).count(),
+                "average_rating": 4.5,  # Mock data
             }
-        
+            
         return stats
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get dashboard stats: {str(e)}")
+        print(f"Error fetching dashboard stats: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @router.get("/recent-documents")
 async def get_recent_documents(
     role: str = Query("student"),
     user_id: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
-    limit: int = Query(10, ge=1, le=50),
+    limit: int = Query(5, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
     """
     Get recent documents based on user role
     """
     try:
-        query = db.query(Document).options(
-            joinedload(Document.uploader),
-            joinedload(Document.department)
-        )
-        
-        # Apply role-based filtering
+        query = db.query(
+            Document.title,
+            Document.status,
+            Document.upload_date,
+            User.first_name,
+            User.last_name
+        ).join(User, Document.uploader_id == User.id)
+
         if role == "admin":
-            # Admin sees all documents
-            pass
+            # Admin sees all recent documents
+            query = query.order_by(desc(Document.upload_date))
+        
         elif role == "supervisor":
-            # Supervisor sees department documents and assigned reviews
-            if department_id:
-                query = query.filter(Document.department_id == department_id)
+            # Supervisor sees recent documents in their department or assigned for review
+            query = query.filter(
+                or_(
+                    Document.department_id == department_id,
+                    Document.supervisor_id == user_id
+                )
+            ).order_by(desc(Document.upload_date))
+            
         elif role == "staff":
-            # Staff sees department documents
-            if department_id:
-                query = query.filter(Document.department_id == department_id)
-        else:  # student
-            # Student sees only their documents
-            if user_id:
-                query = query.filter(Document.uploader_id == user_id)
+            # Staff sees recent documents in their department
+            query = query.filter(Document.department_id == department_id).order_by(desc(Document.upload_date))
+            
+        elif role == "student":
+            # Student sees their own recent documents
+            query = query.filter(Document.uploader_id == user_id).order_by(desc(Document.upload_date))
+            
+        else:
+            return []
+
+        recent_docs = query.limit(limit).all()
         
-        # Get recent documents
-        documents = query.order_by(desc(Document.upload_date)).limit(limit).all()
-        
-        result = []
-        for doc in documents:
-            result.append({
-                "id": doc.id,
+        return [
+            {
                 "title": doc.title,
-                "filename": doc.original_filename,
-                "category": doc.category.value,
                 "status": doc.status.value,
                 "upload_date": doc.upload_date.isoformat(),
-                "file_size": doc.file_size,
-                "uploader_name": doc.uploader.name if doc.uploader else "Unknown",
-                "department_name": doc.department.name if doc.department else "Unknown",
-                "download_count": doc.download_count or 0,
-                "view_count": doc.view_count or 0
-            })
-        
-        return result
-        
+                "uploader": f"{doc.first_name} {doc.last_name}"
+            }
+            for doc in recent_docs
+        ]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get recent documents: {str(e)}")
+        print(f"Error fetching recent documents: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/user-profile")
+async def get_user_profile_summary(
+    user_id: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a summary of the user's profile for the dashboard header
+    """
+    try:
+        user = db.query(
+            User.first_name,
+            User.last_name,
+            User.email,
+            User.role,
+            Department.department_name
+        ).join(Department).filter(User.id == user_id).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return {
+            "name": f"{user.first_name} {user.last_name}",
+            "email": user.email,
+            "role": user.role.value,
+            "department": user.department_name
+        }
+    except Exception as e:
+        print(f"Error fetching user profile summary: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @router.get("/recent-activity")
 async def get_recent_activity(
     role: str = Query("student"),
     user_id: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(5, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
     """
-    Get recent activity feed based on user role
+    Get recent activity for the dashboard (stub implementation).
     """
-    try:
-        # Return empty activity data since ActivityLog is disabled
-        return []
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get recent activity: {str(e)}")
-
-@router.get("/analytics")
-async def get_dashboard_analytics(
-    role: str = Query("student"),
-    department_id: Optional[str] = Query(None),
-    period: str = Query("month"),  # week, month, quarter, year
-    db: Session = Depends(get_db)
-):
-    """
-    Get analytics data for charts and graphs
-    """
-    try:
-        # Determine date range
-        now = datetime.now()
-        if period == "week":
-            start_date = now - timedelta(days=7)
-        elif period == "month":
-            start_date = now - timedelta(days=30)
-        elif period == "quarter":
-            start_date = now - timedelta(days=90)
-        else:  # year
-            start_date = now - timedelta(days=365)
-        
-        # Upload trends
-        upload_query = db.query(
-            func.date(Document.upload_date).label('date'),
-            func.count(Document.id).label('count')
-        ).filter(Document.upload_date >= start_date)
-        
-        # Apply role-based filtering
-        if role != "admin":
-            if role == "student":
-                upload_query = upload_query.filter(Document.uploader_id == "mock-user-id")
-            elif department_id:
-                upload_query = upload_query.filter(Document.department_id == department_id)
-        
-        upload_trends = upload_query.group_by(func.date(Document.upload_date)).all()
-        
-        # Download trends
-        download_query = db.query(
-            func.date(Download.download_date).label('date'),
-            func.count(Download.id).label('count')
-        ).filter(Download.download_date >= start_date)
-        
-        if role != "admin":
-            if role == "student":
-                download_query = download_query.join(Document).filter(Document.uploader_id == "mock-user-id")
-            elif department_id:
-                download_query = download_query.join(Document).filter(Document.department_id == department_id)
-        
-        download_trends = download_query.group_by(func.date(Download.download_date)).all()
-        
-        # Status distribution
-        status_query = db.query(
-            Document.status,
-            func.count(Document.id).label('count')
-        )
-        
-        if role != "admin":
-            if role == "student":
-                status_query = status_query.filter(Document.uploader_id == "mock-user-id")
-            elif department_id:
-                status_query = status_query.filter(Document.department_id == department_id)
-        
-        status_distribution = status_query.group_by(Document.status).all()
-        
-        return {
-            "upload_trends": [
-                {"date": trend.date.isoformat(), "count": trend.count}
-                for trend in upload_trends
-            ],
-            "download_trends": [
-                {"date": trend.date.isoformat(), "count": trend.count}
-                for trend in download_trends
-            ],
-            "status_distribution": [
-                {"status": status.status.value, "count": status.count}
-                for status in status_distribution
-            ]
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
+    # TODO: Implement real activity logs if needed
+    return []

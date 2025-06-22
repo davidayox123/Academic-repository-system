@@ -167,8 +167,7 @@ async def create_sample_documents(users, departments):
         "Computer Networks Security"
     ]
     
-    categories = [DocumentCategory.RESEARCH, DocumentCategory.THESIS, DocumentCategory.ASSIGNMENT, DocumentCategory.PAPER]
-    statuses = [DocumentStatus.PENDING, DocumentStatus.APPROVED, DocumentStatus.UNDER_REVIEW]
+    statuses = [DocumentStatus.SUBMITTED, DocumentStatus.APPROVED, DocumentStatus.UNDER_REVIEW, DocumentStatus.REJECTED]
     
     for i, title in enumerate(doc_titles):
         student = random.choice(students)
@@ -176,28 +175,11 @@ async def create_sample_documents(users, departments):
         
         doc = Document(
             title=title,
-            description=f"This is a comprehensive document about {title.lower()}. It covers various aspects and provides detailed analysis.",
-            filename=f"document_{i+1}.pdf",
-            original_filename=f"{title.replace(' ', '_').lower()}.pdf",
-            file_path=f"/uploads/documents/document_{i+1}.pdf",
-            file_size=random.randint(500000, 5000000),  # 500KB to 5MB
-            file_type="application/pdf",
-            file_extension="pdf",
-            mime_type="application/pdf",
-            category=random.choice(categories),
-            document_type=DocumentType.PDF,
-            tags=["academic", "research", "university"],
-            keywords=f"{title}, academic, research",
-            course_code=f"CS{random.randint(100, 400)}",
-            academic_year="2024-2025",
-            semester="Fall 2024",
             status=random.choice(statuses),
             uploader_id=student.id,
             department_id=student.department_id,
             supervisor_id=supervisor.id,
             upload_date=datetime.now() - timedelta(days=random.randint(1, 30)),
-            download_count=random.randint(0, 50),
-            view_count=random.randint(10, 200)
         )
         documents.append(doc)
     return documents
@@ -220,7 +202,7 @@ async def init_database():
         users = await create_sample_users(departments)
         session.add_all(users)
         session.flush()  # Get IDs
-          # Create documents
+        # Create documents
         documents = await create_sample_documents(users, departments)
         session.add_all(documents)
         session.flush()  # Get IDs

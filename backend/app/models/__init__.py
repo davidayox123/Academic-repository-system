@@ -1,6 +1,6 @@
 # Import all models from their respective files
 from .user import User, UserRole
-from .document import Document, DocumentStatus, DocumentCategory, DocumentType
+from .document import Document, DocumentStatus
 from .department import Department
 from .metadata import Metadata
 from .review import Review, ReviewDecision, ReviewStatus
@@ -12,9 +12,7 @@ __all__ = [
     "User", 
     "UserRole",
     "Document", 
-    "DocumentStatus", 
-    "DocumentCategory",
-    "DocumentType",
+    "DocumentStatus",
     "Department",
     "Metadata",
     "Review",

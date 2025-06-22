@@ -28,7 +28,7 @@ class Department(Base):
     
     # --- Relationships ---
     # A department has many users
-    users = relationship("User", back_populates="department")
+    users = relationship("User", back_populates="department", foreign_keys="User.department_id")
     
     # A department has many documents
     documents = relationship("Document", back_populates="department")

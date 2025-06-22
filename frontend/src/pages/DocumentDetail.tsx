@@ -7,7 +7,6 @@ import {
   Calendar,
   User,
   Building,
-  Tag,
   ArrowLeft,
   Share2,
   Heart,
@@ -22,16 +21,14 @@ import { formatDistanceToNow } from 'date-fns'
 interface DocumentDetails {
   id: string
   title: string
-  description: string
-  filename: string
-  category: string
   status: string
   upload_date: string
   file_size: number
-  uploader_name: string
-  department_name: string
-  download_count: number
-  view_count: number
+  uploader: string
+  department_id: string
+  file_path: string
+  rejection_reason?: string
+  download_url?: string
 }
 
 const DocumentDetail: React.FC = () => {
@@ -56,18 +53,14 @@ const DocumentDetail: React.FC = () => {
       setDoc({
         id: apiDoc.id,
         title: apiDoc.title,
-        description: apiDoc.description || '',
-        filename: apiDoc.filename || 'document.pdf',
-        category: apiDoc.category || 'general',
         status: apiDoc.status,
         upload_date: apiDoc.upload_date,
-        file_size: apiDoc.file_size,
-        uploader_name: apiDoc.uploader?.first_name ? `${apiDoc.uploader.first_name} ${apiDoc.uploader.last_name}` : 'Unknown',
-        department_name: typeof apiDoc.department === 'string'
-          ? apiDoc.department
-          : apiDoc.department?.name || 'Unknown',
-        download_count: apiDoc.download_count || 0,
-        view_count: apiDoc.view_count || 0
+        file_size: apiDoc.file_size || 0,
+        uploader: typeof apiDoc.uploader === 'string' ? apiDoc.uploader : '',
+        department_id: apiDoc.department_id,
+        file_path: apiDoc.file_path || '',
+        rejection_reason: apiDoc.rejection_reason,
+        download_url: apiDoc.download_url
       })
     } catch (err: any) {
       const errorMessage = handleApiError(err)
@@ -89,7 +82,7 @@ const DocumentDetail: React.FC = () => {
       const url = window.URL.createObjectURL(blob)
       const link = window.document.createElement('a')
       link.href = url
-      link.download = doc.filename
+      link.download = doc.title
       window.document.body.appendChild(link)
       link.click()
       window.document.body.removeChild(link)
@@ -185,11 +178,11 @@ const DocumentDetail: React.FC = () => {
                   <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center space-x-1">
                       <User className="w-4 h-4" />
-                      <span>{doc.uploader_name}</span>
+                      <span>{doc.uploader}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Building className="w-4 h-4" />
-                      <span>{doc.department_name}</span>
+                      <span>{doc.department_id}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Calendar className="w-4 h-4" />
@@ -208,40 +201,9 @@ const DocumentDetail: React.FC = () => {
               <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-xl">
                 <div className="text-sm text-gray-500 mb-1">File Size</div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {formatFileSize(doc.file_size)}
+                  {formatFileSize(doc.file_size || 0)}
                 </div>
               </div>
-              <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-xl">
-                <div className="text-sm text-gray-500 mb-1">Downloads</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {doc.download_count}
-                </div>
-              </div>
-              <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-xl">
-                <div className="text-sm text-gray-500 mb-1">Views</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {doc.view_count}
-                </div>
-              </div>
-            </div>
-
-            {/* Category */}
-            <div className="mb-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <Tag className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-500">Category</span>
-              </div>
-              <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-full">
-                {doc.category}
-              </span>
-            </div>
-
-            {/* Description */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Description</h3>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                {doc.description || 'No description available for this document.'}
-              </p>
             </div>
 
             {/* Actions */}
@@ -282,7 +244,7 @@ const DocumentDetail: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400">
               Preview functionality will be available in the next update
             </p>            <p className="text-sm text-gray-500 mt-2">
-              Filename: {doc.filename}
+              Filename: {doc.title}
             </p>
           </div>
         </motion.div>

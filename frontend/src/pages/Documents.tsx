@@ -25,28 +25,25 @@ import { formatDistanceToNow } from 'date-fns'
 
 // Update DocumentItem to match backend Document type
 interface DocumentItem {
-  id: string
-  title: string
-  filename: string
-  category: string
-  status: string
-  upload_date: string
-  file_size: number
-  uploader_id: string
-  uploader?: string
-  department_id: string
-  department?: string
-  download_count: number
-  view_count: number
+  id: string;
+  title: string;
+  status: string;
+  upload_date: string;
+  uploader: string;
+  department_id: string;
+  file_path?: string;
+  file_size?: number;
+  rejection_reason?: string;
+  download_url?: string;
 }
 
 // Utility function for file size formatting
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes || bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 const Documents: React.FC = () => {
@@ -59,12 +56,10 @@ const Documents: React.FC = () => {
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
   const [previewDocument, setPreviewDocument] = useState<DocumentItem | null>(null)
 
   // Filter options
   const statusOptions = ['pending', 'under_review', 'approved', 'rejected']
-  const categoryOptions = ['research', 'thesis', 'assignment', 'presentation', 'paper', 'report', 'project', 'other']
 
   // Fetch documents from API
   const fetchDocuments = async () => {
@@ -75,23 +70,20 @@ const Documents: React.FC = () => {
         user_id: user?.id,
         search: searchQuery || undefined,
         status: statusFilter || undefined,
-        category: categoryFilter || undefined
+        // category: categoryFilter || undefined // Remove category, not in backend
       }
       const response = await documentsApi.getDocuments(filters)
       const mappedDocs = (response.data.items || []).map((doc: any) => ({
         id: doc.id,
         title: doc.title,
-        filename: doc.filename,
-        category: doc.category,
         status: doc.status,
         upload_date: doc.upload_date,
-        file_size: doc.file_size,
-        uploader_id: doc.uploader_id,
-        uploader: doc.uploader?.first_name + ' ' + doc.uploader?.last_name,
+        uploader: doc.uploader?.full_name || '',
         department_id: doc.department_id,
-        department: doc.department?.name,
-        download_count: doc.download_count,
-        view_count: doc.view_count
+        file_path: doc.file_path,
+        file_size: doc.file_size,
+        rejection_reason: doc.rejection_reason,
+        download_url: doc.download_url,
       }))
       setDocuments(mappedDocs)
     } catch (err: any) {
@@ -104,29 +96,7 @@ const Documents: React.FC = () => {
   }  // Fetch documents on mount and when filters change
   useEffect(() => {
     fetchDocuments()
-  }, [user?.role, user?.id, searchQuery, statusFilter, categoryFilter])
-  // Handle download
-  const handleDownload = async (documentId: string, title: string) => {
-    try {
-      const response = await documentsApi.downloadDocument(documentId, user?.id)
-      
-      // Create blob URL and trigger download
-      const blob = new Blob([response.data])
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = title
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      
-      toast.success('Download started')
-    } catch (err: any) {      const errorMessage = handleApiError(err)
-      toast.error(`Failed to download: ${errorMessage}`)
-    }
-  }
-
+  }, [user?.role, user?.id, searchQuery, statusFilter])
   // TODO: Handle review (for supervisors and admins)
   const handleReview = async () => {
     toast('Review functionality is not yet implemented')
@@ -290,31 +260,11 @@ const Documents: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Category Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Category
-                      </label>
-                      <select 
-                        value={categoryFilter} 
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
-                      >
-                        <option value="">All Categories</option>
-                        {categoryOptions.map(category => (
-                          <option key={category} value={category}>
-                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
                     {/* Clear Filters */}
                     <div className="flex items-end">
                       <button
                         onClick={() => {
                           setStatusFilter('')
-                          setCategoryFilter('')
                           setSearchQuery('')
                         }}
                         className="w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-blue-500 transition-all duration-200"
@@ -370,7 +320,8 @@ const Documents: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
                         <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>                      <div className="text-xs text-gray-500">
+                      </div>
+                      <div className="text-xs text-gray-500">
                         PDF • {formatFileSize(doc.file_size)}
                       </div>
                     </div>
@@ -385,60 +336,48 @@ const Documents: React.FC = () => {
                   {/* Content */}
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {doc.title}
-                  </h3>                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
-                    {doc.filename}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
+                    Uploaded by: {doc.uploader}
                   </p>
 
-                  {/* Category */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
-                      {doc.category}
-                    </span>
-                  </div>                  {/* Meta Info */}
+                  {/* Meta Info */}
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <div className="flex items-center space-x-2">
                       <Users className="w-4 h-4" />
                       <span>{doc.uploader}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <span>{doc.department}</span>
+                      <span>Dept: {doc.department_id}</span>
                     </div>
                   </div>
 
                   {/* Stats */}
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{doc.view_count}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Download className="w-4 h-4" />
-                        <span>{doc.download_count}</span>
-                      </div>
-                    </div>
                     <span>{formatDistanceToNow(new Date(doc.upload_date), { addSuffix: true })}</span>
-                  </div>                  {/* Actions */}
-                  <div className="flex items-center space-x-2">                    <Link
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center space-x-2">
+                    <Link
                       to={`/documents/${doc.id}`}
                       className="btn-primary flex-1 py-2 text-sm flex items-center justify-center"
                     >
                       <Eye className="w-4 h-4 mr-1" />
                       View
                     </Link>
-                    <button
-                      onClick={() => setPreviewDocument(doc)}
-                      className="btn-ghost px-3 py-2"
-                      title="Quick Preview"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDownload(doc.id, doc.filename)}
-                      className="btn-secondary px-3 py-2"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+                    {doc.file_path && (
+                      <a
+                        href={doc.file_path}
+                        className="btn-secondary px-3 py-2"
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Download"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -461,8 +400,9 @@ const Documents: React.FC = () => {
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                           {doc.title}
-                        </h3>                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
-                          {doc.filename}
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
+                          Uploaded by: {doc.uploader}
                         </p>
                         <div className="flex items-center justify-between mb-2">
                           <span className={getStatusBadge(doc.status)}>
@@ -473,60 +413,39 @@ const Documents: React.FC = () => {
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <span>{doc.uploader}</span>
                           <span>•</span>
-                          <span>{doc.department}</span>
+                          <span>Dept: {doc.department_id}</span>
                           <span>•</span>
                           <span>{formatDistanceToNow(new Date(doc.upload_date), { addSuffix: true })}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">                      <div className="text-center">
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{doc.view_count}</div>
-                        <div className="text-xs text-gray-500">Views</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white">{doc.download_count}</div>
-                        <div className="text-xs text-gray-500">Downloads</div>
-                      </div>                      <div className="flex items-center space-x-2">                        <Link
-                          to={`/documents/${doc.id}`}
-                          className="btn-primary py-2 px-4 flex items-center"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Link>
-                        <button
-                          onClick={() => setPreviewDocument(doc)}
-                          className="btn-ghost px-3 py-2"
-                          title="Quick Preview"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDownload(doc.id, doc.filename)}
+                    <div className="flex items-center space-x-4">
+                      <Link
+                        to={`/documents/${doc.id}`}
+                        className="btn-primary py-2 px-4 flex items-center"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </Link>
+                      <button
+                        onClick={() => setPreviewDocument(doc)}
+                        className="btn-ghost px-3 py-2"
+                        title="Quick Preview"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {doc.file_path && (
+                        <a
+                          href={doc.file_path}
                           className="btn-secondary px-3 py-2"
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Download"
                         >
                           <Download className="w-4 h-4" />
-                        </button>
-                        
-                        {/* Review buttons for supervisors/admins on pending documents */}
-                        {canReview && doc.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleReview()}
-                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors flex items-center"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleReview()}
-                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors flex items-center"
-                            >
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
+                        </a>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -580,7 +499,7 @@ const Documents: React.FC = () => {
                       {previewDocument.title}
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      {previewDocument.filename} • {formatFileSize(previewDocument.file_size)}
+                      File size: {formatFileSize(previewDocument.file_size)}
                     </p>
                   </div>
                   <button
@@ -606,28 +525,18 @@ const Documents: React.FC = () => {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-500">Category:</span>
-                            <span className="text-gray-900 dark:text-white">
-                              {previewDocument.category.charAt(0).toUpperCase() + previewDocument.category.slice(1)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
                             <span className="text-gray-500">Uploader:</span>
                             <span className="text-gray-900 dark:text-white">{previewDocument.uploader}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Department:</span>
-                            <span className="text-gray-900 dark:text-white">{previewDocument.department}</span>
+                            <span className="text-gray-900 dark:text-white">{previewDocument.department_id}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Uploaded:</span>
                             <span className="text-gray-900 dark:text-white">
                               {formatDistanceToNow(new Date(previewDocument.upload_date), { addSuffix: true })}
                             </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Downloads:</span>
-                            <span className="text-gray-900 dark:text-white">{previewDocument.download_count}</span>
                           </div>
                         </div>
                       </div>
@@ -642,16 +551,16 @@ const Documents: React.FC = () => {
                           <Eye className="w-4 h-4 mr-2 inline" />
                           View Full Details
                         </Link>
-                        <button
-                          onClick={() => {
-                            handleDownload(previewDocument.id, previewDocument.filename)
-                            setPreviewDocument(null)
-                          }}
-                          className="btn-secondary w-full py-2"
+                        <a
+                          href={previewDocument.file_path}
+                          className="btn-secondary w-full py-2 text-center block"
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          <Download className="w-4 h-4 mr-2" />
+                          <Download className="w-4 h-4 mr-2 inline" />
                           Download
-                        </button>
+                        </a>
                         
                         {/* Review buttons for supervisors/admins on pending documents */}
                         {canReview && previewDocument.status === 'pending' && (

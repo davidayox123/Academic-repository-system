@@ -65,59 +65,24 @@ export interface Department {
   documents?: Document[]
 }
 
+// Update Document type to match backend response
 export interface Document {
-  id: string // document_id
-  title: string
-  description?: string
-  filename: string
-  original_filename: string
-  file_path: string
-  file_size: number
-  file_type: string
-  file_extension: string
-  mime_type: string
-  category: DocumentCategory
-  document_type: DocumentType
-  tags?: string[]
-  keywords?: string
-  abstract?: string
-  language?: string
-  course_code?: string
-  academic_year?: string
-  semester?: string
-  status: DocumentStatus
-  is_public: boolean
-  is_featured: boolean
-  uploader_id: string
-  department_id: string
-  supervisor_id?: string
-  approval_date?: string
-  rejection_reason?: string
-  reviewer_comments?: string
-  is_processed: boolean
-  thumbnail_path?: string
-  preview_path?: string
-  text_content?: string
-  download_count: number
-  view_count: number
-  like_count: number
-  share_count: number
-  version: string
-  parent_document_id?: string
-  access_level: string
-  download_allowed: boolean
-  upload_date: string
-  last_accessed?: string
-  created_at: string
-  updated_at: string
-  uploader?: User
-  supervisor?: User
-  department?: Department
-  parent_document?: Document
-  reviews?: Review[]
-  downloads?: Download[]
-  document_metadata?: Metadata
-  audit_logs?: AuditLog[]
+  id: string;
+  title: string;
+  status: string;
+  upload_date: string;
+  uploader: User | UploaderInfo;
+  department_id: string;
+  file_path?: string;
+  file_size?: number;
+  rejection_reason?: string;
+  download_url?: string;
+}
+
+export interface UploaderInfo {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
 export type DocumentStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'archived'

@@ -1,131 +1,69 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
-from datetime import datetime, date
+import uuid
+from datetime import datetime
 from enum import Enum
+from typing import Optional
 
+from pydantic import BaseModel, EmailStr
+
+# Enum classes must match the definitions in the SQLAlchemy model
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    SUPERVISOR = "supervisor"
-    STAFF = "staff"
     STUDENT = "student"
+    STAFF = "staff"
+    SUPERVISOR = "supervisor"
+    ADMIN = "admin"
 
+class UserLevel(str, Enum):
+    L100 = '100'
+    L200 = '200'
+    L300 = '300'
+    L400 = '400'
+    L500 = '500'
+
+class AdminLevel(str, Enum):
+    SUPER = 'super'
+    DEPARTMENT = 'department'
+    LIMITED = 'limited'
+
+# Base User Schema
 class UserBase(BaseModel):
     email: EmailStr
     first_name: str
+    middle_name: Optional[str] = None
     last_name: str
     role: UserRole
-    department_id: Optional[str] = None
-    phone: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    address: Optional[str] = None
-    
-    # Student-specific fields
-    student_id: Optional[str] = None
-    year_of_study: Optional[int] = None
-    gpa: Optional[str] = None
-    enrollment_date: Optional[date] = None
-    graduation_date: Optional[date] = None
-    
-    # Staff-specific fields
-    employee_id: Optional[str] = None
-    position: Optional[str] = None
-    hire_date: Optional[date] = None
-    office_location: Optional[str] = None
-    salary: Optional[str] = None
-    
-    # Supervisor-specific fields
-    title: Optional[str] = None
-    specialization: Optional[str] = None
-    research_interests: Optional[str] = None
-    qualifications: Optional[str] = None
-    years_of_experience: Optional[int] = None
+    department_id: uuid.UUID
 
+# Schema for creating a user
 class UserCreate(UserBase):
     password: str
-
-class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    role: Optional[UserRole] = None
-    department_id: Optional[str] = None
-    phone: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    address: Optional[str] = None
     
-    # Student-specific fields
-    student_id: Optional[str] = None
-    year_of_study: Optional[int] = None
-    gpa: Optional[str] = None
-    enrollment_date: Optional[date] = None
-    graduation_date: Optional[date] = None
-    
-    # Staff-specific fields
-    employee_id: Optional[str] = None
+    # Role-specific fields are optional during creation
+    matric_no: Optional[str] = None
+    level: Optional[UserLevel] = None
+    staff_id: Optional[str] = None
     position: Optional[str] = None
-    hire_date: Optional[date] = None
-    office_location: Optional[str] = None
-    salary: Optional[str] = None
-    
-    # Supervisor-specific fields
-    title: Optional[str] = None
-    specialization: Optional[str] = None
-    research_interests: Optional[str] = None
-    qualifications: Optional[str] = None
-    years_of_experience: Optional[int] = None
+    office_no: Optional[str] = None
+    assigned_department: Optional[uuid.UUID] = None
+    specialization_area: Optional[str] = None
+    max_documents: Optional[int] = 50
+    admin_id: Optional[str] = None
+    admin_level: Optional[AdminLevel] = AdminLevel.LIMITED
+    permissions_scope: Optional[str] = None
 
-class UserResponse(UserBase):
-    id: str
+# Schema for updating a user
+class UserUpdate(UserBase):
+    pass
+
+class User(UserBase):
+    id: uuid.UUID
+    role: UserRole
     is_active: bool
+    last_login: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
-class UserProfile(BaseModel):
-    id: str
-    email: str
-    first_name: str
-    last_name: str
-    full_name: str  # computed field
-    role: UserRole
-    department_name: Optional[str] = None
-    phone: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    address: Optional[str] = None
-    
-    # Role-specific fields (populated based on role)
-    student_id: Optional[str] = None
-    year_of_study: Optional[int] = None
-    gpa: Optional[str] = None
-    enrollment_date: Optional[date] = None
-    graduation_date: Optional[date] = None
-    
-    employee_id: Optional[str] = None
-    position: Optional[str] = None
-    hire_date: Optional[date] = None
-    office_location: Optional[str] = None
-    
-    title: Optional[str] = None
-    specialization: Optional[str] = None
-    research_interests: Optional[str] = None
-    qualifications: Optional[str] = None
-    years_of_experience: Optional[int] = None
-    
-    is_active: bool
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-class MockUser(BaseModel):
-    """Mock user for demo login implementation"""
-    id: str
-    email: str
-    first_name: str
-    last_name: str
-    full_name: str
-    role: UserRole
-    department_id: Optional[str] = None
+class UserProfile(User):
     department_name: Optional[str] = None
