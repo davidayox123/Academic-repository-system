@@ -62,16 +62,25 @@ async def upload_document(
     )
     db.add(db_document)
     db.commit()
-    db.refresh(db_document)
-
-    # Eager load uploader for the response
-    db.refresh(db_document, attribute_names=['uploader'])
+    # Re-query the document with relationships loaded
+    db_document = db.query(Document).options(joinedload(Document.uploader)).filter(Document.id == document_id).first()
 
     download_url = request.url_for("download_document_file", document_id=db_document.id)
 
     return DocumentResponse(
-        **db_document.__dict__,
-        uploader=UploaderInfo(**db_document.uploader.__dict__),
+        id=db_document.id,
+        title=db_document.title,
+        status=db_document.status,
+        upload_date=db_document.upload_date,
+        uploader=UploaderInfo(
+            id=db_document.uploader.id,
+            full_name=db_document.uploader.full_name,
+            email=db_document.uploader.email
+        ),
+        department_id=db_document.department_id,
+        file_path=db_document.file_path,
+        file_size=db_document.file_size,
+        rejection_reason=db_document.rejection_reason,
         download_url=str(download_url)
     )
 
@@ -89,8 +98,19 @@ async def get_document(
     download_url = request.url_for("download_document_file", document_id=doc.id)
     
     return DocumentResponse(
-        **doc.__dict__,
-        uploader=UploaderInfo(**doc.uploader.__dict__),
+        id=doc.id,
+        title=doc.title,
+        status=doc.status,
+        upload_date=doc.upload_date,
+        uploader=UploaderInfo(
+            id=doc.uploader.id,
+            full_name=doc.uploader.full_name,
+            email=doc.uploader.email
+        ),
+        department_id=doc.department_id,
+        file_path=doc.file_path,
+        file_size=doc.file_size,
+        rejection_reason=doc.rejection_reason,
         download_url=str(download_url)
     )
 
@@ -127,19 +147,27 @@ async def get_documents(
 
     doc_responses = [
         DocumentResponse(
-            **doc.__dict__,
-            uploader=UploaderInfo(**doc.uploader.__dict__),
+            id=doc.id,
+            title=doc.title,
+            status=doc.status,
+            upload_date=doc.upload_date,
+            uploader=UploaderInfo(
+                id=doc.uploader.id,
+                full_name=doc.uploader.full_name,
+                email=doc.uploader.email
+            ),
+            department_id=doc.department_id,
+            file_path=doc.file_path,
+            file_size=doc.file_size,
+            rejection_reason=doc.rejection_reason,
             download_url=str(request.url_for("download_document_file", document_id=doc.id))
         )
         for doc in documents
     ]
 
     return DocumentListResponse(
-        documents=doc_responses,
-        total=total,
-        page=page,
-        pages=(total + per_page - 1) // per_page,
-        per_page=per_page
+        items=doc_responses,
+        total=total
     )
 
 @router.put("/{document_id}", response_model=DocumentResponse)
@@ -165,8 +193,19 @@ async def update_document(
     download_url = request.url_for("download_document_file", document_id=doc.id)
 
     return DocumentResponse(
-        **doc.__dict__,
-        uploader=UploaderInfo(**doc.uploader.__dict__),
+        id=doc.id,
+        title=doc.title,
+        status=doc.status,
+        upload_date=doc.upload_date,
+        uploader=UploaderInfo(
+            id=doc.uploader.id,
+            full_name=doc.uploader.full_name,
+            email=doc.uploader.email
+        ),
+        department_id=doc.department_id,
+        file_path=doc.file_path,
+        file_size=doc.file_size,
+        rejection_reason=doc.rejection_reason,
         download_url=str(download_url)
     )
 
@@ -192,7 +231,16 @@ async def download_document_file(
 ):
     """Download the physical file for a document and log the action."""
     doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc or not doc.file_path or not os.path.exists(doc.file_path):
+    if not doc or not doc.file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Support both absolute and relative file paths
+    file_path = doc.file_path
+    if not os.path.isabs(file_path):
+        # If relative, join with DOCUMENTS_DIR
+        file_path = str(DOCUMENTS_DIR / Path(file_path).name)
+
+    if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
 
     # Log the download action
@@ -200,4 +248,4 @@ async def download_document_file(
     db.add(new_download)
     db.commit()
 
-    return FileResponse(path=doc.file_path, filename=Path(doc.file_path).name, media_type='application/octet-stream')
+    return FileResponse(path=file_path, filename=Path(file_path).name, media_type='application/octet-stream')

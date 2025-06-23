@@ -4,6 +4,8 @@ import { toast } from 'react-hot-toast'
 import { FileText, Image, Video, Music, Archive, File } from 'lucide-react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { documentsApi } from '../services/api'
+import { useDashboardStore } from '../stores/useDashboardStore'
+import { useNavigate } from 'react-router-dom'
 
 interface UploadFile extends File {
   id: string
@@ -19,8 +21,6 @@ interface DocumentMetadata {
   description: string
   tags: string[]
   department_id: string
-  category: string
-  course_code: string
   keywords: string
   publication_year: number
   authors: string
@@ -30,6 +30,8 @@ interface DocumentMetadata {
 
 const Upload: React.FC = () => {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
+  const { fetchAllDashboardData } = useDashboardStore()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [currentTag, setCurrentTag] = useState('')
@@ -38,8 +40,6 @@ const Upload: React.FC = () => {
     description: '',
     tags: [],
     department_id: user?.department_id || '',
-    category: 'research',
-    course_code: '',
     keywords: '',
     publication_year: new Date().getFullYear(),
     authors: user ? `${user.first_name} ${user.last_name}` : '',
@@ -155,19 +155,20 @@ const Upload: React.FC = () => {
 
   const uploadFiles = async () => {
     if (!validateForm()) return
-
+    if (!user?.id) {
+      toast.error('You must be logged in with a valid user to upload.')
+      return
+    }
     setIsUploading(true)
-    
     try {
-      const uploadPromises = files.map(async (file) => {        // Update file status to uploading
-        setFiles(prev => prev.map(f => 
+      const uploadPromises = files.map(async (file) => {
+        setFiles(prev => prev.map(f =>
           f.id === file.id ? { ...f, status: 'uploading' } : f
         ))
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('title', metadata.title);
-        formData.append('uploader_id', user?.id || '');
+        formData.append('uploader_id', user.id); // Always use real user UUID
         formData.append('department_id', metadata.department_id);
         // Optionally: if you have supervisor_id, add it here
         // if (metadata.supervisor_id) formData.append('supervisor_id', metadata.supervisor_id);
@@ -219,7 +220,10 @@ const Upload: React.FC = () => {
 
       await Promise.all(uploadPromises)
       toast.success('All files uploaded successfully!')
-      
+      // Refresh dashboard data after upload
+      await fetchAllDashboardData()
+      // Optionally, navigate to dashboard
+      navigate('/dashboard')
       // Reset form after successful upload
       setTimeout(() => {
         setFiles([])
@@ -228,8 +232,6 @@ const Upload: React.FC = () => {
           description: '',
           tags: [],
           department_id: user?.department_id || '',
-          category: 'research',
-          course_code: '',
           keywords: '',
           publication_year: new Date().getFullYear(),
           authors: user ? `${user.first_name} ${user.last_name}` : '',
@@ -368,42 +370,9 @@ const Upload: React.FC = () => {
                   placeholder="Describe your document"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <select
-                  value={metadata.category}
-                  onChange={(e) => setMetadata(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="research">Research</option>
-                  <option value="thesis">Thesis</option>
-                  <option value="assignment">Assignment</option>
-                  <option value="presentation">Presentation</option>
-                  <option value="paper">Paper</option>
-                  <option value="report">Report</option>
-                  <option value="project">Project</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course Code
-                </label>
-                <input
-                  type="text"
-                  value={metadata.course_code}
-                  onChange={(e) => setMetadata(prev => ({ ...prev, course_code: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., CS101"
-                />
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tags

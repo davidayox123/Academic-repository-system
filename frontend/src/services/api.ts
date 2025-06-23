@@ -12,6 +12,7 @@ import type {
   DocumentStats,
   UserStats,
   AuditLog,
+  Department,
 } from '../types'
 
 // API Configuration
@@ -114,9 +115,8 @@ export const documentsApi = {
   deleteDocument: (id: string): Promise<AxiosResponse<ApiResponse<void>>> => {
     return api.delete(`/documents/${id}`)
   },
-  downloadDocument: (id: string, userId?: string): Promise<AxiosResponse<Blob>> => {
-    const params = userId ? { user_id: userId } : {}
-    return api.get(`/documents/${id}/download`, { responseType: 'blob', params })
+  downloadDocument: (id: string): Promise<AxiosResponse<Blob>> => {
+    return api.get(`/documents/${id}/download`, { responseType: 'blob' })
   },
   getDocumentStats: (): Promise<AxiosResponse<ApiResponse<DocumentStats>>> => {
     return api.get('/documents/stats')
@@ -170,6 +170,10 @@ export const usersApi = {
 
   getUserStats: (): Promise<AxiosResponse<ApiResponse<UserStats>>> => {
     return api.get('/users/stats')
+  },
+
+  getDepartments: (): Promise<AxiosResponse<Array<Department>>> => {
+    return api.get('/departments')
   },
 }
 
@@ -291,14 +295,6 @@ export const adminApi = {
 
   deleteUser: (id: string): Promise<AxiosResponse<{ message: string }>> => {
     return api.delete(`/users/${id}`)
-  },
-
-  getDepartments: (): Promise<AxiosResponse<Array<{
-    id: string
-    name: string
-    description?: string
-  }>>> => {
-    return api.get('/users/departments/list')
   },
 }
 

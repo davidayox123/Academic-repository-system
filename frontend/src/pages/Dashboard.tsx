@@ -108,11 +108,50 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
     )
-  }  // Stats configuration
-  const statsConfig = stats ? [
+  }  // Map backend student stats to expected frontend keys
+  let mappedStats = stats;
+  if (user?.role === 'student' && stats) {
+    mappedStats = {
+      total_documents: stats.total_uploads,
+      approved_documents: stats.approved_uploads,
+      pending_reviews: stats.pending_reviews,
+      total_downloads: stats.total_downloads,
+      ...stats
+    };
+  }
+  if (user?.role === 'staff' && stats) {
+    mappedStats = {
+      total_documents: stats.department_documents,
+      approved_documents: stats.approved_documents,
+      pending_reviews: stats.pending_reviews,
+      total_downloads: stats.total_downloads,
+      ...stats
+    };
+  }
+  if (user?.role === 'supervisor' && stats) {
+    mappedStats = {
+      total_documents: stats.department_documents,
+      approved_documents: stats.approved_documents,
+      pending_reviews: stats.assigned_reviews,
+      total_downloads: stats.completed_reviews,
+      ...stats
+    };
+  }
+  if (user?.role === 'admin' && stats) {
+    mappedStats = {
+      total_documents: stats.total_documents,
+      approved_documents: stats.approved_documents,
+      pending_reviews: stats.pending_reviews,
+      total_downloads: stats.total_downloads,
+      ...stats
+    };
+  }
+
+  // Stats configuration
+  const statsConfig = mappedStats ? [
     {
       title: 'Total Documents',
-      value: stats.total_documents?.toString() || '0',
+      value: mappedStats.total_documents?.toString() || '0',
       change: 0, // We don't have change tracking yet
       changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: FileText,
@@ -120,7 +159,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Pending Reviews',
-      value: stats.pending_reviews?.toString() || '0',
+      value: mappedStats.pending_reviews?.toString() || '0',
       change: 0,
       changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: Clock,
@@ -128,7 +167,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Approved',
-      value: stats.approved_documents?.toString() || '0',
+      value: mappedStats.approved_documents?.toString() || '0',
       change: 0,
       changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: CheckCircle,
@@ -136,7 +175,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Downloads',
-      value: stats.total_downloads?.toString() || '0',
+      value: mappedStats.total_downloads?.toString() || '0',
       change: 0,
       changeType: 'neutral' as 'neutral' | 'positive' | 'negative',
       icon: Download,

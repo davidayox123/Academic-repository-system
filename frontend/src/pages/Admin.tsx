@@ -13,7 +13,8 @@ import {
   Search,
   MoreHorizontal
 } from 'lucide-react'
-import { adminApi, handleApiError } from '../services/api'
+import { adminApi, handleApiError, usersApi } from '../services/api'
+import type { UserRole } from '../types'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -49,6 +50,17 @@ const Admin: React.FC = () => {
   const [usersLoading, setUsersLoading] = useState(false)
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('')
+  const [showAddUser, setShowAddUser] = useState(false)
+  const [addUserLoading, setAddUserLoading] = useState(false)
+  const [addUserForm, setAddUserForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    role: 'student',
+    department_id: '',
+  })
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     fetchInitialData()
@@ -59,6 +71,10 @@ const Admin: React.FC = () => {
       fetchUsers()
     }
   }, [activeTab, userSearch, userRoleFilter])
+
+  useEffect(() => {
+    usersApi.getDepartments().then(res => setDepartments(res.data)).catch(() => setDepartments([]))
+  }, [])
 
   const fetchInitialData = async () => {
     try {
@@ -108,6 +124,31 @@ const Admin: React.FC = () => {
       toast.error(errorMessage)
     } finally {
       setUsersLoading(false)
+    }
+  }
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAddUserLoading(true)
+    try {
+      await usersApi.createUser({
+        name: `${addUserForm.first_name} ${addUserForm.last_name}`.trim(),
+        email: addUserForm.email,
+        password: addUserForm.password,
+        confirm_password: addUserForm.password,
+        role: addUserForm.role as UserRole,
+        department_id: addUserForm.department_id
+      })
+      toast.success('User added successfully')
+      setShowAddUser(false)
+      setAddUserForm({
+        first_name: '', last_name: '', email: '', password: '', role: 'student', department_id: ''
+      })
+      fetchUsers()
+    } catch (err: any) {
+      toast.error(handleApiError(err))
+    } finally {
+      setAddUserLoading(false)
     }
   }
 
@@ -180,7 +221,7 @@ const Admin: React.FC = () => {
       {/* User Management Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h2>
-        <button className="btn-primary flex items-center space-x-2">
+        <button className="btn-primary flex items-center space-x-2" onClick={() => setShowAddUser(true)}>
           <UserPlus className="w-4 h-4" />
           <span>Add User</span>
         </button>
@@ -291,6 +332,39 @@ const Admin: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Add User Modal */}
+      <AnimatePresence>
+        {showAddUser && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            <motion.form initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} onSubmit={handleAddUser} className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-md">
+              <h3 className="text-xl font-bold mb-4">Add New User</h3>
+              <div className="space-y-3">
+                <input type="text" required placeholder="First Name" className="input w-full" value={addUserForm.first_name} onChange={e => setAddUserForm(f => ({ ...f, first_name: e.target.value }))} />
+                <input type="text" required placeholder="Last Name" className="input w-full" value={addUserForm.last_name} onChange={e => setAddUserForm(f => ({ ...f, last_name: e.target.value }))} />
+                <input type="email" required placeholder="Email" className="input w-full" value={addUserForm.email} onChange={e => setAddUserForm(f => ({ ...f, email: e.target.value }))} />
+                <input type="password" required placeholder="Password" className="input w-full" value={addUserForm.password} onChange={e => setAddUserForm(f => ({ ...f, password: e.target.value }))} />
+                <select className="input w-full" value={addUserForm.role} onChange={e => setAddUserForm(f => ({ ...f, role: e.target.value }))}>
+                  <option value="student">Student</option>
+                  <option value="staff">Staff</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <select className="input w-full" value={addUserForm.department_id} onChange={e => setAddUserForm(f => ({ ...f, department_id: e.target.value }))} required>
+                  <option value="">Select Department</option>
+                  {departments.map(dep => (
+                    <option key={dep.id} value={dep.id}>{dep.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <button type="button" className="btn-secondary" onClick={() => setShowAddUser(false)} disabled={addUserLoading}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={addUserLoading}>{addUserLoading ? 'Adding...' : 'Add User'}</button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 

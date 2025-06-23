@@ -14,7 +14,8 @@ import {
   CheckCircle,
   AlertCircle,
   Users,
-  X
+  X,
+  Trash2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -22,20 +23,7 @@ import { documentsApi, handleApiError } from '../services/api'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
-
-// Update DocumentItem to match backend Document type
-interface DocumentItem {
-  id: string;
-  title: string;
-  status: string;
-  upload_date: string;
-  uploader: string;
-  department_id: string;
-  file_path?: string;
-  file_size?: number;
-  rejection_reason?: string;
-  download_url?: string;
-}
+import type { Document } from '../types'
 
 // Utility function for file size formatting
 const formatFileSize = (bytes?: number): string => {
@@ -48,7 +36,7 @@ const formatFileSize = (bytes?: number): string => {
 
 const Documents: React.FC = () => {
   const { user } = useAuthStore()
-  const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -56,7 +44,7 @@ const Documents: React.FC = () => {
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [previewDocument, setPreviewDocument] = useState<DocumentItem | null>(null)
+  const [previewDocument, setPreviewDocument] = useState<Document | null>(null)
 
   // Filter options
   const statusOptions = ['pending', 'under_review', 'approved', 'rejected']
@@ -70,7 +58,7 @@ const Documents: React.FC = () => {
         user_id: user?.id,
         search: searchQuery || undefined,
         status: statusFilter || undefined,
-        // category: categoryFilter || undefined // Remove category, not in backend
+        sort_order: sortOrder,
       }
       const response = await documentsApi.getDocuments(filters)
       const mappedDocs = (response.data.items || []).map((doc: any) => ({
@@ -145,6 +133,33 @@ const Documents: React.FC = () => {
         return 'status-under-review'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const handleDelete = async (docId: string) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    try {
+      await documentsApi.deleteDocument(docId)
+      toast.success('Document deleted successfully')
+      fetchDocuments()
+    } catch (err: any) {
+      toast.error(handleApiError(err))
+    }
+  }
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      const response = await documentsApi.downloadDocument(doc.id)
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', doc.title + (doc.file_path ? doc.file_path.substring(doc.file_path.lastIndexOf('.')) : ''))
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      toast.error('Failed to download document')
     }
   }
 
@@ -338,14 +353,14 @@ const Documents: React.FC = () => {
                     {doc.title}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
-                    Uploaded by: {doc.uploader}
+                    Uploaded by: {doc.uploader && (typeof doc.uploader === 'object' ? ('full_name' in doc.uploader ? doc.uploader.full_name : doc.uploader.first_name + ' ' + doc.uploader.last_name) : doc.uploader)}
                   </p>
 
                   {/* Meta Info */}
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <div className="flex items-center space-x-2">
                       <Users className="w-4 h-4" />
-                      <span>{doc.uploader}</span>
+                      <span>{doc.uploader && (typeof doc.uploader === 'object' ? ('full_name' in doc.uploader ? doc.uploader.full_name : doc.uploader.first_name + ' ' + doc.uploader.last_name) : doc.uploader)}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <span>Dept: {doc.department_id}</span>
@@ -367,17 +382,21 @@ const Documents: React.FC = () => {
                       View
                     </Link>
                     {doc.file_path && (
-                      <a
-                        href={doc.file_path}
+                      <button
+                        onClick={() => handleDownload(doc)}
                         className="btn-secondary px-3 py-2"
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
                         title="Download"
                       >
                         <Download className="w-4 h-4" />
-                      </a>
+                      </button>
                     )}
+                    <button
+                      onClick={() => handleDelete(doc.id)}
+                      className="btn-danger px-3 py-2"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </motion.div>
               ))}
@@ -402,7 +421,7 @@ const Documents: React.FC = () => {
                           {doc.title}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
-                          Uploaded by: {doc.uploader}
+                          Uploaded by: {doc.uploader && (typeof doc.uploader === 'object' ? ('full_name' in doc.uploader ? doc.uploader.full_name : doc.uploader.first_name + ' ' + doc.uploader.last_name) : doc.uploader)}
                         </p>
                         <div className="flex items-center justify-between mb-2">
                           <span className={getStatusBadge(doc.status)}>
@@ -411,7 +430,7 @@ const Documents: React.FC = () => {
                           <span className="text-sm text-gray-500">{formatFileSize(doc.file_size)}</span>
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <span>{doc.uploader}</span>
+                          <span>{doc.uploader && (typeof doc.uploader === 'object' ? ('full_name' in doc.uploader ? doc.uploader.full_name : doc.uploader.first_name + ' ' + doc.uploader.last_name) : doc.uploader)}</span>
                           <span>•</span>
                           <span>Dept: {doc.department_id}</span>
                           <span>•</span>
@@ -435,17 +454,21 @@ const Documents: React.FC = () => {
                         <Eye className="w-4 h-4" />
                       </button>
                       {doc.file_path && (
-                        <a
-                          href={doc.file_path}
+                        <button
+                          onClick={() => handleDownload(doc)}
                           className="btn-secondary px-3 py-2"
-                          download
-                          target="_blank"
-                          rel="noopener noreferrer"
                           title="Download"
                         >
                           <Download className="w-4 h-4" />
-                        </a>
+                        </button>
                       )}
+                      <button
+                        onClick={() => handleDelete(doc.id)}
+                        className="btn-danger px-3 py-2"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -526,7 +549,7 @@ const Documents: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Uploader:</span>
-                            <span className="text-gray-900 dark:text-white">{previewDocument.uploader}</span>
+                            <span className="text-gray-900 dark:text-white">{previewDocument.uploader && (typeof previewDocument.uploader === 'object' ? ('full_name' in previewDocument.uploader ? previewDocument.uploader.full_name : previewDocument.uploader.first_name + ' ' + previewDocument.uploader.last_name) : previewDocument.uploader)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Department:</span>

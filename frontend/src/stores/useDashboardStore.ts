@@ -33,6 +33,10 @@ interface DashboardStats {
   
   // Student stats
   my_documents?: number
+  total_uploads?: number
+  approved_uploads?: number
+  rejected_uploads?: number
+  average_rating?: number
 }
 
 interface RecentDocument {
@@ -90,7 +94,7 @@ export const useDashboardStore = create<DashboardState>()(
         
         // Get current role and user from auth store
         const authStore = useAuthStore.getState()
-        const currentRole = authStore.user?.role
+        const currentRole = authStore.user?.role?.toUpperCase() || undefined;
         const userId = authStore.user?.id
         
         const params: any = {}
@@ -118,7 +122,7 @@ export const useDashboardStore = create<DashboardState>()(
         
         // Get current role and user from auth store
         const authStore = useAuthStore.getState()
-        const currentRole = authStore.user?.role
+        const currentRole = authStore.user?.role?.toUpperCase() || undefined;
         const userId = authStore.user?.id
         
         const params: any = {}
@@ -146,7 +150,7 @@ export const useDashboardStore = create<DashboardState>()(
         
         // Get current role and user from auth store
         const authStore = useAuthStore.getState()
-        const currentRole = authStore.user?.role
+        const currentRole = authStore.user?.role?.toUpperCase() || undefined;
         const userId = authStore.user?.id
         
         const params: any = {}
@@ -174,7 +178,7 @@ export const useDashboardStore = create<DashboardState>()(
         
         // Get current role and user from auth store
         const authStore = useAuthStore.getState()
-        const currentRole = authStore.user?.role
+        const currentRole = authStore.user?.role?.toUpperCase() || undefined;
         const userId = authStore.user?.id
         
         const params: any = {}

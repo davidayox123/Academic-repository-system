@@ -47,7 +47,7 @@ async def get_dashboard_stats(
                 # Department breakdown
                 "department_stats": [
                     {"name": dept[0], "count": dept[1]} 
-                    for dept in db.query(Department.department_name, func.count(Document.id)).join(Document, Document.department_id == Department.department_id).group_by(Department.department_name).all()
+                    for dept in db.query(Department.name, func.count(Document.id)).join(Document, Document.department_id == Department.id).group_by(Department.name).all()
                 ]
             }
             
@@ -214,7 +214,7 @@ async def get_user_profile_summary(
             User.last_name,
             User.email,
             User.role,
-            Department.department_name
+            Department.name
         ).join(Department).filter(User.id == user_id).first()
 
         if not user:

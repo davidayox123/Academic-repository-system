@@ -9,8 +9,8 @@ import toast from 'react-hot-toast'
 const demoAccounts = {
   student: [
     { id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', name: 'John Doe', email: 'john.doe@student.edu', department: 'Computer Science' },
-    { id: 'auto-generated-uuid', name: 'Alice Smith', email: 'alice.smith@student.edu', department: 'Physics' },
-    { id: 'auto-generated-uuid', name: 'Bob Johnson', email: 'bob.johnson@student.edu', department: 'Mathematics' }
+    { id: 'b3e2a1c4-9f8d-4e2b-8c1a-2f3e4d5c6b7a', name: 'Alice Smith', email: 'alice.smith@student.edu', department: 'Physics' },
+    { id: 'c4d3b2a1-8e7f-4d2c-9b1a-3e4f5d6c7b8a', name: 'Bob Johnson', email: 'bob.johnson@student.edu', department: 'Mathematics' }
   ],
   staff: [
     { id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0', name: 'Jennifer Anderson', email: 'jennifer.anderson@staff.edu', department: 'Computer Science' }

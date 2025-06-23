@@ -18,10 +18,8 @@ import {
   Crown,
   UserCog
 } from 'lucide-react'
-import { useAuthStore } from '../stores/useAuthStore'
 
 const Home: React.FC = () => {  const navigate = useNavigate()
-  const { selectRole } = useAuthStore()
   const [selectedRole, setSelectedRole] = useState<string>('')
 
   const roles = [
@@ -56,11 +54,7 @@ const Home: React.FC = () => {  const navigate = useNavigate()
   ]
 
   const handleGetStarted = () => {
-    if (selectedRole) {
-      // TODO: Replace 'user-id-placeholder' with the actual user ID from your auth state/store
-      selectRole(selectedRole as any, 'user-id-placeholder')
-      navigate('/dashboard')
-    }
+    navigate('/login')
   }
 
   const features = [
@@ -374,6 +368,44 @@ const Home: React.FC = () => {  const navigate = useNavigate()
                 <span>Get Started Now</span>
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Group Members Section */}
+      <section className="py-16">
+        <div className="content-wrapper">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true }}
+            className="glass p-8 rounded-2xl text-center max-w-2xl mx-auto"
+          >
+            <h2 className="text-3xl font-bold mb-4 gradient-text">Group 6 Members</h2>
+            <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">Academic Repository System Project</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-separate border-spacing-y-2">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-gray-600 dark:text-gray-300">Name</th>
+                    <th className="px-4 py-2 text-gray-600 dark:text-gray-300">Matric Number</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="px-4 py-2">Ayodele David</td><td className="px-4 py-2">23CG034046</td></tr>
+                  <tr><td className="px-4 py-2">Babalola Babafunmi</td><td className="px-4 py-2">23CG034047</td></tr>
+                  <tr><td className="px-4 py-2">Bamgbade Habeebat</td><td className="px-4 py-2">23CG034048</td></tr>
+                  <tr><td className="px-4 py-2">Belaboh Gideon</td><td className="px-4 py-2">23CG034049</td></tr>
+                  <tr><td className="px-4 py-2">Bello Daniel Ikenna</td><td className="px-4 py-2">23CG034050</td></tr>
+                  <tr><td className="px-4 py-2">Bolaji-Busola Mojeti</td><td className="px-4 py-2">23CG034051</td></tr>
+                  <tr><td className="px-4 py-2">Tony-Idaka Joy</td><td className="px-4 py-2">23CG034157</td></tr>
+                  <tr><td className="px-4 py-2">Esonu Chijioke Dexter</td><td className="px-4 py-2">23CH034184</td></tr>
+                  <tr><td className="px-4 py-2">Ezeani Ysabel</td><td className="px-4 py-2">23CH034185</td></tr>
+                  <tr><td className="px-4 py-2">Faminu Idunnuoluwa</td><td className="px-4 py-2">23CH034186</td></tr>
+                </tbody>
+              </table>
             </div>
           </motion.div>
         </div>
